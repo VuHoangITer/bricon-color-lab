@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Thư viện màu – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Thư viện màu</h1>
+  <div>
+    <a class="btn" href="{{ url_for('colors.similar_search') }}">Tìm màu gần giống</a>
+  </div>
+</div>
+
+
+<div class="color-grid">
+  {% for it in items %}
+  <a class="color-card" href="{{ url_for('colors.detail', color_id=it.color['id']) }}">
+    <div class="swatch" style="background: {{ it.color['hex_color'] or '#e5e7eb' }}">
+      {% if not it.color['hex_color'] %}<span class="swatch-empty">chưa có màu</span>{% endif %}
+    </div>
+    <div class="card-body">
+      <div class="card-title">
+        <b>{{ it.color['ma_mau'] }}</b>
+        <span>
+          <span class="badge badge-muted">V{{ it.active_version_number }}</span>
+          <span class="badge badge-{{ 'ok' if it.status == 'ĐẠT' else ('warn' if it.status == 'SAI TỔNG' else 'muted') }}">{{ it.status }}</span>
+        </span>
+      </div>
+      <div class="card-sub">{{ it.color['ten_mau'] or 'Chưa đặt tên' }}</div>
+      {% if it.color['ghi_chu'] %}<div class="card-note" title="{{ it.color['ghi_chu'] }}">📌 {{ it.color['ghi_chu'] }}</div>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Nhật ký thao tác – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<h1>Nhật ký thao tác</h1>
+<form method="get" class="inline-form filter-form">
+  <select name="user_id">
+    <option value="">— Tất cả người dùng —</option>
+    {% for u in users %}
+    <option value="{{ u['id'] }}" {{ 'selected' if f_user == u['id'] }}>{{ u['full_name'] or u['username'] }}</option>
+    {% endfor %}
+  </select>
+  <select name="color_id">
+    <option value="">— Tất cả màu —</option>
+    {% for c in colors %}
+    <option value="{{ c['id'] }}" {{ 'selected' if f_color == c['id'] }}>Màu {{ c['ma_mau'] }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn">Lọc</button>
+  <a class="btn" href="{{ url_for('logs.index') }}">Xóa lọc</a>
+</form>
+
+<p class="muted small">{{ total }} bản ghi — trang {{ page }}/{{ total_pages }}</p>
+
+<table class="data-table responsive-stack logs-table">
+  <thead><tr><th>Thời gian</th><th>Người dùng</th><th>Hành động</th><th>Đối tượng</th><th>Chi tiết</th></tr></thead>
+  <tbody>
+    {% for l in logs %}
+    <tr>
+      <td class="small">{{ l['created_at'] }}</td>
+      <td>{{ l['full_name'] or l['username'] or '—' }}</td>
+      <td><b>{{ l['action'] }}</b></td>
+      <td class="small">{{ l['target_type'] or '' }}{% if l['target_id'] %} #{{ l['target_id'] }}{% endif %}</td>
+      <td class="small detail-cell">
+        {% if l['human_detail'] %}{{ l['human_detail']|safe }}{% endif %}
+        {% if l['detail'] %}
+        <details style="margin-top:4px">
+          <summary class="muted" style="cursor:pointer;font-size:11px">Dữ liệu gốc</summary>
+          <pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;margin:4px 0 0">{{ l['detail'] }}</pre>
+        </details>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">Chưa có nhật ký nào.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<nav class="pagination no-print" aria-label="Phân trang nhật ký">
+  {% if page > 1 %}
+  <a class="btn btn-sm" href="{{ url_for('logs.index', user_id=f_user, color_id=f_color, page=1) }}">«</a>
+  <a class="btn btn-sm" href="{{ url_for('logs.index', user_id=f_user, color_id=f_color, page=page-1) }}">‹</a>
+  {% else %}
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">«</span>
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">‹</span>
+  {% endif %}
+
+  <span class="pagination-pages">
+    {% for p in page_range %}
+      {% if p == '…' %}
+      <span class="pagination-ellipsis">…</span>
+      {% elif p == page %}
+      <span class="btn btn-sm btn-primary pagination-current" aria-current="page">{{ p }}</span>
+      {% else %}
+      <a class="btn btn-sm" href="{{ url_for('logs.index', user_id=f_user, color_id=f_color, page=p) }}">{{ p }}</a>
+      {% endif %}
+    {% endfor %}
+  </span>
+
+  {% if page < total_pages %}
+  <a class="btn btn-sm" href="{{ url_for('logs.index', user_id=f_user, color_id=f_color, page=page+1) }}">›</a>
+  <a class="btn btn-sm" href="{{ url_for('logs.index', user_id=f_user, color_id=f_color, page=total_pages) }}">»</a>
+  {% else %}
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">›</span>
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">»</span>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

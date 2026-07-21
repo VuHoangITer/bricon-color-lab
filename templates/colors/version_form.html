@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Phiên bản mới — {{ color['ma_mau'] }} – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<h1>Tạo phiên bản mới — Màu {{ color['ma_mau'] }}{% if color['ten_mau'] %} ({{ color['ten_mau'] }}){% endif %}</h1>
+{% if not can('duyet_mau') %}
+<div class="note" style="margin-bottom:14px">📌 Sau khi lưu, phiên bản mới sẽ ở trạng thái <b>CHỜ DUYỆT</b> — cần Quản lý/Admin duyệt trước khi trở thành bản đang dùng.</div>
+{% endif %}
+
+<form method="post" class="color-form" id="colorForm">
+  <div class="form-grid">
+    <label>Mã màu *
+      <input type="text" name="ma_mau" required value="{{ color['ma_mau'] }}">
+    </label>
+    <label>Tên màu
+      <input type="text" name="ten_mau" value="{{ color['ten_mau'] or '' }}">
+    </label>
+  </div>
+  <label>Ghi chú chung của màu
+    <input type="text" name="ghi_chu" value="{{ color['ghi_chu'] or '' }}">
+  </label>
+
+  <label>Màu hiển thị (HEX)
+    <div class="hex-row">
+      <input type="color" id="hexPicker" value="{{ color['hex_color'] or '#cccccc' }}">
+      <input type="text" name="hex_color" id="hexText" maxlength="7"
+             pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB"
+             value="{{ color['hex_color'] or '' }}">
+      <span class="muted small">Đổi thông tin ở trên sẽ áp dụng ngay, không cần duyệt.</span>
+    </div>
+  </label>
+
+  <label>Ghi chú cho phiên bản này <span class="muted small">(tùy chọn — vd: "Giảm tỷ lệ đen theo phản hồi khách")</span>
+    <input type="text" name="version_ghi_chu" placeholder="Lý do/điểm thay đổi của phiên bản này">
+  </label>
+
+  <h2>Tỷ lệ pigment (%) — tổng phải đúng 100%</h2>
+  <div class="pigment-grid">
+    {% for p in pigments %}
+    <label>{{ p['name'] }}
+      <input type="number" step="any" min="0" max="100" class="pigment-input"
+             name="pigment_{{ p['id'] }}"
+             value="{{ values.get(p['id'], '') if values.get(p['id']) else '' }}"
+             placeholder="0">
+    </label>
+    {% endfor %}
+  </div>
+
+  <div class="total-bar">
+    Tổng: <b id="totalPct">0%</b>
+    <span id="totalStatus" class="badge badge-muted">CHƯA KHAI BÁO</span>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" id="submitBtn">Lưu phiên bản mới</button>
+    <a class="btn" href="{{ url_for('colors.detail', color_id=color['id']) }}">Hủy</a>
+  </div>
+</form>
+<script src="{{ url_for('static', filename='js/color_form.js') }}"></script>
+{% endblock %}

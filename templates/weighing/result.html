@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Phiếu cân {{ d.color['ma_mau'] }} – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head no-print">
+  <h1>Phiếu cân — Màu {{ d.color['ma_mau'] }}</h1>
+  <div>
+    {% if can('xuat_pdf') %}
+    <button class="btn" onclick="window.print()">🖨 In</button>
+    <a class="btn btn-primary"
+       href="{{ url_for('weighing.pdf', color_id=d.color['id'],
+                        tong_thanh_pham=calc.tong_thanh_pham_g,
+                        ty_le_pigment=calc.ty_le_pigment * 100) }}">Xuất PDF</a>
+    {% endif %}
+    <a class="btn" href="{{ url_for('weighing.new', color_id=d.color['id']) }}">Tạo phiếu khác</a>
+    <a class="btn" href="{{ url_for('colors.detail', color_id=d.color['id']) }}">Về trang màu</a>
+  </div>
+</div>
+
+<div class="print-sheet">
+  <h2 class="print-only">BRICON – PHIẾU CÂN MÀU SẢN XUẤT</h2>
+  <p>
+    Mã màu: <b>{{ d.color['ma_mau'] }}</b>
+    {% if d.color['ten_mau'] %} · Tên màu: {{ d.color['ten_mau'] }}{% endif %}<br>
+    Tổng thành phẩm: <b>{{ calc.tong_thanh_pham_g|gram }} g</b>
+    · Tỷ lệ pigment: <b>{{ calc.ty_le_pigment|pct }}</b><br>
+    Người tạo: {{ g.current_user['full_name'] or g.current_user['username'] }} · Ngày: {{ now }}
+  </p>
+
+  <table class="data-table">
+    <thead><tr><th>STT</th><th>Nguyên liệu cần cân</th><th class="num">Tỷ lệ thành phẩm</th><th class="num">Khối lượng (g)</th></tr></thead>
+    <tbody>
+      {% for l in calc.lines %}
+      <tr>
+        <td>{{ l.stt }}</td><td>{{ l.ten }}</td>
+        <td class="num">{{ l.ty_le_thanh_pham|pct(3) }}</td>
+        <td class="num"><b>{{ l.khoi_luong_g|gram }}</b></td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <td colspan="3"><b>TỔNG CỘNG</b></td>
+        <td class="num"><b>{{ calc.tong_can|gram }}</b></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Kiểm tra tổng:
+    <span class="badge badge-{{ 'ok' if calc.khop else 'warn' }}">
+      {{ 'KHỚP' if calc.khop else 'CÓ CHÊNH LỆCH' }}</span>
+    (chênh lệch {{ calc.chenh_lech|abs|gram }} g)
+  </p>
+
+  <div class="sign-row print-only">
+    <div><b>NGƯỜI CÂN</b><br><span class="small">(Ký, ghi rõ họ tên)</span></div>
+    <div><b>NGƯỜI KIỂM TRA</b><br><span class="small">(Ký, ghi rõ họ tên)</span></div>
+  </div>
+</div>
+{% endblock %}

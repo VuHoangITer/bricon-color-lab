@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Chờ duyệt – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Phiên bản chờ duyệt</h1>
+</div>
+<div class="table-wrap">
+<table class="data-table responsive-stack pending-table">
+  <thead><tr><th>Mã màu</th><th>Phiên bản</th><th>Ghi chú</th><th>Cập nhật lúc</th><th style="width:140px"></th></tr></thead>
+  <tbody>
+    {% for v in items %}
+    <tr>
+      <td><b>{{ v['ma_mau'] }}</b>{% if v['ten_mau'] %} — {{ v['ten_mau'] }}{% endif %}</td>
+      <td>V{{ v['version_number'] }}</td>
+      <td class="small detail-cell">{{ v['ghi_chu'] or '—' }}</td>
+      <td class="small">{{ v['created_at'] }}</td>
+      <td><a class="btn btn-sm" href="{{ url_for('colors.detail', color_id=v['color_id']) }}">Xem &amp; duyệt</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">Không có phiên bản nào đang chờ duyệt.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

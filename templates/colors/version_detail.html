@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Phiên bản {{ d.version['version_number'] }} — {{ color['ma_mau'] }} – BRICON COLOR LAB{% endblock %}
+{% block content %}
+{% set duyet_labels = {'CHO_DUYET': 'CHỜ DUYỆT', 'DA_DUYET': 'ĐÃ DUYỆT', 'TU_CHOI': 'TỪ CHỐI'} %}
+{% set duyet_badge = {'CHO_DUYET': 'muted', 'DA_DUYET': 'ok', 'TU_CHOI': 'warn'} %}
+<div class="page-head">
+  <h1>Màu {{ color['ma_mau'] }} — Phiên bản {{ d.version['version_number'] }}
+    {% if d.version['is_active'] %}<span class="badge badge-ok">ĐANG DÙNG</span>{% endif %}
+  </h1>
+  <div>
+    {% if can_edit_version %}
+    <a class="btn" href="{{ url_for('colors.edit_version', color_id=color['id'], version_id=d.version['id']) }}">Sửa phiên bản này</a>
+    {% endif %}
+    {% if can_activate and d.version['trang_thai_duyet'] == 'DA_DUYET' and not d.version['is_active'] %}
+    <form method="post" action="{{ url_for('colors.activate_version', color_id=color['id'], version_id=d.version['id']) }}" style="display:inline"
+          onsubmit="return confirm('Đặt phiên bản {{ d.version['version_number'] }} làm bản đang dùng?')">
+      <button type="submit" class="btn btn-primary">Dùng lại phiên bản này</button>
+    </form>
+    {% endif %}
+    {% if can_delete_version %}
+    <form method="post" action="{{ url_for('colors.delete_version', color_id=color['id'], version_id=d.version['id']) }}" style="display:inline"
+          onsubmit="return confirm('Xóa hẳn phiên bản {{ d.version['version_number'] }}? Không thể hoàn tác.')">
+      <button type="submit" class="btn btn-danger">Xóa phiên bản</button>
+    </form>
+    {% endif %}
+    <a class="btn" href="{{ url_for('colors.detail', color_id=color['id']) }}">Về trang màu</a>
+  </div>
+</div>
+
+<section class="card">
+  <h2>Công thức
+    <span class="badge badge-{{ 'ok' if d.status == 'ĐẠT' else ('warn' if d.status == 'SAI TỔNG' else 'muted') }}">{{ d.status }}</span>
+    <span class="badge badge-{{ duyet_badge[d.version['trang_thai_duyet']] }}">{{ duyet_labels[d.version['trang_thai_duyet']] }}</span>
+  </h2>
+  <table class="data-table">
+    <thead><tr><th>Pigment</th><th class="num">Tỷ lệ</th></tr></thead>
+    <tbody>
+      {% for r in d.active_rows %}
+      <tr><td>{{ r['name'] }}</td><td class="num">{{ r['ty_le']|pct(3) }}</td></tr>
+      {% else %}
+      <tr><td colspan="2" class="muted">Chưa khai báo pigment nào.</td></tr>
+      {% endfor %}
+      <tr class="total-row"><td><b>TỔNG</b></td><td class="num"><b>{{ d.total|pct(3) }}</b></td></tr>
+    </tbody>
+  </table>
+  {% if d.version['ghi_chu'] %}<p class="note">📌 {{ d.version['ghi_chu'] }}</p>{% endif %}
+  {% if d.version['trang_thai_duyet'] == 'TU_CHOI' and d.version['ly_do_tu_choi'] %}
+  <p class="note" style="border-color:var(--warn);background:#fef3f2;color:var(--warn)">⚠️ Bị từ chối: {{ d.version['ly_do_tu_choi'] }}</p>
+  {% endif %}
+  <p class="muted small">Tạo lúc {{ d.version['created_at'] }}{% if d.version['duyet_luc'] %} · Duyệt lúc {{ d.version['duyet_luc'] }}{% endif %}</p>
+</section>
+{% endblock %}

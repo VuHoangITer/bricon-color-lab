@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Không có quyền – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>🚫 Không có quyền truy cập</h1>
+  <p class="muted">Tài khoản của bạn không có quyền thực hiện thao tác này. Liên hệ Quản lý hoặc Admin nếu cần được cấp thêm quyền.</p>
+  <a class="btn" href="{{ url_for('colors.index') }}">Về trang chủ</a>
+</div>
+{% endblock %}

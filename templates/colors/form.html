@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Tạo màu mới – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<h1>Tạo màu mới</h1>
+{% if not can('duyet_mau') %}
+<div class="note" style="margin-bottom:14px">📌 Sau khi lưu, phiên bản 1 sẽ ở trạng thái <b>CHỜ DUYỆT</b> — cần Quản lý/Admin duyệt trước khi dùng để tạo phiếu cân.</div>
+{% endif %}
+<form method="post" class="color-form" id="colorForm" enctype="multipart/form-data">
+  <div class="form-grid">
+    <label>Mã màu * <span class="muted small">(gợi ý — có thể sửa)</span>
+      <input type="text" name="ma_mau" required value="{{ suggested_ma_mau }}" placeholder="vd: BR-000138">
+    </label>
+    <label>Tên màu
+      <input type="text" name="ten_mau" placeholder="vd: Xám tro nhạt">
+    </label>
+  </div>
+  <label>Ghi chú
+    <input type="text" name="ghi_chu">
+  </label>
+
+  <label>Màu hiển thị (HEX)
+    <div class="hex-row">
+      <input type="color" id="hexPicker" value="#cccccc">
+      <input type="text" name="hex_color" id="hexText" maxlength="7"
+             pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB">
+      <span class="muted small">Chọn màu hoặc gõ mã HEX — chỉ để hiển thị, không ảnh hưởng công thức.</span>
+    </div>
+  </label>
+
+  <h2>Ảnh màu (bắt buộc)</h2>
+  <div class="form-grid">
+    <label>Chọn ảnh *
+      <input type="file" name="image" accept="image/*" required id="imageInput">
+    </label>
+    <label>Loại ảnh
+      <select name="loai_anh">
+        {% for t in image_types %}<option>{{ t }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+  <label>Ghi chú ảnh (tùy chọn)
+    <input type="text" name="anh_ghi_chu">
+  </label>
+  <div id="imagePreviewWrap" style="display:none;margin:-6px 0 14px">
+    <span class="muted small">Xem trước — kiểm tra ảnh có bị mờ/lệch trước khi lưu:</span>
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-top:6px">
+      <img id="imagePreview" style="max-width:220px;border:1px solid var(--border);border-radius:9px">
+      <button type="button" id="imageRemoveBtn" class="btn btn-sm btn-danger">Xóa ảnh</button>
+    </div>
+  </div>
+
+  <h2>Tỷ lệ pigment (%) — phiên bản 1, tổng phải đúng 100%</h2>
+  <div class="pigment-grid">
+    {% for p in pigments %}
+    <label>{{ p['name'] }}
+      <input type="number" step="any" min="0" max="100" class="pigment-input"
+             name="pigment_{{ p['id'] }}" placeholder="0">
+    </label>
+    {% endfor %}
+  </div>
+
+  <div class="total-bar">
+    Tổng: <b id="totalPct">0%</b>
+    <span id="totalStatus" class="badge badge-muted">CHƯA KHAI BÁO</span>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" id="submitBtn">Lưu</button>
+    <a class="btn" href="{{ url_for('colors.index') }}">Hủy</a>
+  </div>
+</form>
+
+<script src="{{ url_for('static', filename='js/color_form.js') }}"></script>
+<script>
+(function () {
+  const input = document.getElementById('imageInput');
+  const wrap = document.getElementById('imagePreviewWrap');
+  const img = document.getElementById('imagePreview');
+  const removeBtn = document.getElementById('imageRemoveBtn');
+  if (!input || !wrap || !img) return;
+  let currentUrl = null;
+  input.addEventListener('change', () => {
+    const f = input.files && input.files[0];
+    if (!f) { wrap.style.display = 'none'; return; }
+    if (currentUrl) URL.revokeObjectURL(currentUrl);
+    currentUrl = URL.createObjectURL(f);
+    img.src = currentUrl;
+    wrap.style.display = 'block';
+  });
+  if (removeBtn) {
+    removeBtn.addEventListener('click', () => {
+      input.value = '';
+      if (currentUrl) { URL.revokeObjectURL(currentUrl); currentUrl = null; }
+      img.src = '';
+      wrap.style.display = 'none';
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Quản lý pigment – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Quản lý pigment</h1>
+</div>
+
+<section class="card">
+  <h2>Thêm pigment mới</h2>
+  <form method="post" action="{{ url_for('pigments.new') }}" class="inline-form">
+    <input type="text" name="name" placeholder="Tên pigment, vd: OXIT SẮT NÂU" required>
+    <button type="submit" class="btn btn-primary">Thêm</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Danh sách pigment</h2>
+  <table class="data-table responsive-stack pigments-table">
+    <thead><tr><th style="width:40px">#</th><th>Tên pigment</th><th class="num">Số màu đang dùng</th><th style="width:220px"></th></tr></thead>
+    <tbody>
+      {% for p in pigments %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>
+          {% if can('sua_pigment') %}
+          <form method="post" action="{{ url_for('pigments.edit', pigment_id=p['id']) }}"
+                class="inline-form" style="margin:0">
+            <input type="text" name="name" value="{{ p['name'] }}" required>
+            <button type="submit" class="btn btn-sm">Lưu tên</button>
+          </form>
+          {% else %}
+          {{ p['name'] }}
+          {% endif %}
+        </td>
+        <td class="num">
+          {% if p['so_mau_dung'] > 0 %}<b>{{ p['so_mau_dung'] }}</b>{% else %}<span class="muted">0</span>{% endif %}
+        </td>
+        <td>
+          {% if p['so_mau_dung'] == 0 and can('xoa_pigment') %}
+          <form method="post" action="{{ url_for('pigments.delete', pigment_id=p['id']) }}"
+                style="margin:0" onsubmit="return confirm('Xóa pigment {{ p['name'] }}?')">
+            <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+          </form>
+          {% elif p['so_mau_dung'] > 0 %}
+          <span class="muted small">Đang dùng — không thể xóa</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">Chỉ xóa được pigment chưa nằm trong công thức màu nào. Đổi tên sẽ áp dụng cho mọi màu đang dùng pigment đó.</p>
+</section>
+{% endblock %}

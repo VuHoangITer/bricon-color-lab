@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}{{ color['ma_mau'] }} – BRICON COLOR LAB{% endblock %}
+{% block content %}
+{% set duyet_labels = {'CHO_DUYET': 'CHỜ DUYỆT', 'DA_DUYET': 'ĐÃ DUYỆT', 'TU_CHOI': 'TỪ CHỐI'} %}
+{% set duyet_badge = {'CHO_DUYET': 'muted', 'DA_DUYET': 'ok', 'TU_CHOI': 'warn'} %}
+<div class="page-head">
+  <h1><span class="swatch-dot" style="background: {{ color['hex_color'] or '#e5e7eb' }}"></span>Màu {{ color['ma_mau'] }} {% if color['ten_mau'] %}– {{ color['ten_mau'] }}{% endif %}</h1>
+  <div>
+    {% if can_create_version %}
+    <a class="btn" href="{{ url_for('colors.new_version', color_id=color['id']) }}">Tạo phiên bản mới</a>
+    {% endif %}
+    {% if can('tao_phieu_can') and ready_for_weighing %}
+    <a class="btn btn-primary" href="{{ url_for('weighing.new', color_id=color['id']) }}">Cân</a>
+    {% endif %}
+    {% if can_delete_color %}
+    <form method="post" action="{{ url_for('colors.delete', color_id=color['id']) }}" style="display:inline"
+          onsubmit="return confirm('XÓA VĨNH VIỄN màu {{ color['ma_mau'] }}? Sẽ xóa cả ảnh, mã QR và toàn bộ phiên bản liên quan, không thể hoàn tác.')">
+      <button type="submit" class="btn btn-danger">Xóa</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% if can('tao_phieu_can') and not ready_for_weighing %}
+<p class="muted small" style="margin-top:-10px;margin-bottom:14px">Chưa thể tạo phiếu cân — cần có 1 phiên bản ĐÃ DUYỆT với tổng pigment ĐẠT 100%.</p>
+{% endif %}
+{% if version_has_pending %}
+<div class="flash flash-warning no-print" style="margin-bottom:14px">Màu này đang có 1 phiên bản CHỜ DUYỆT — xem bảng lịch sử bên dưới.</div>
+{% endif %}
+
+<div class="detail-grid">
+  <section class="card">
+    <h2>Công thức đang dùng
+      {% if active_detail %}
+      <span class="badge badge-ok">V{{ active['version_number'] }}</span>
+      <span class="badge badge-{{ 'ok' if active_detail.status == 'ĐẠT' else ('warn' if active_detail.status == 'SAI TỔNG' else 'muted') }}">{{ active_detail.status }}</span>
+      {% else %}
+      <span class="badge badge-muted">CHƯA CÓ BẢN DÙNG</span>
+      {% endif %}
+    </h2>
+    {% if active_detail %}
+    <table class="data-table formula-table">
+      <thead><tr><th>Pigment</th><th class="num">Tỷ lệ</th></tr></thead>
+      <tbody>
+        {% for r in active_detail.active_rows %}
+        <tr><td>{{ r['name'] }}</td><td class="num">{{ r['ty_le']|pct(3) }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="muted">Chưa khai báo pigment nào.</td></tr>
+        {% endfor %}
+        <tr class="total-row"><td><b>TỔNG</b></td><td class="num"><b>{{ active_detail.total|pct(3) }}</b></td></tr>
+      </tbody>
+    </table>
+    {% if active['ghi_chu'] %}<p class="note">📌 {{ active['ghi_chu'] }}</p>{% endif %}
+    {% else %}
+    <p class="muted">Màu này chưa có phiên bản nào được duyệt — xem bảng lịch sử bên dưới để duyệt 1 phiên bản.</p>
+    {% endif %}
+    {% if color['ghi_chu'] %}<p class="note">📌 Ghi chú chung: {{ color['ghi_chu'] }}</p>{% endif %}
+    <p class="muted small">Tạo lúc {{ color['created_at'] }} · Cập nhật {{ color['updated_at'] }}</p>
+  </section>
+
+  <section class="card">
+    <h2>Mã QR</h2>
+    {% if can('xem_qr') %}
+      {% if not active_detail %}
+        <p class="muted">QR sẽ được tự động sinh khi có phiên bản được duyệt.</p>
+      {% elif color['qr_code_path'] %}
+        <img class="qr-img" src="{{ url_for('static', filename=color['qr_code_path']) }}" alt="QR màu {{ color['ma_mau'] }}">
+        <a class="btn btn-sm" download="qr_{{ color['ma_mau'] }}.png"
+           href="{{ url_for('static', filename=color['qr_code_path']) }}">Tải PNG</a>
+      {% elif can('tao_qr') %}
+        <p class="muted">Chưa có mã QR.</p>
+        <form method="post" action="{{ url_for('colors.generate_qr', color_id=color['id']) }}">
+          <button class="btn btn-sm" type="submit">Sinh mã QR</button>
+        </form>
+      {% else %}
+        <p class="muted">Chưa có mã QR.</p>
+      {% endif %}
+    {% else %}
+      <p class="muted">Bạn không có quyền xem mã QR.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Hình ảnh</h2>
+  {% if can('duyet_mau') or (color['created_by'] == g.current_user['id']) or can('upload_anh') %}
+  <form method="post" enctype="multipart/form-data" class="inline-form"
+        action="{{ url_for('colors.upload_image', color_id=color['id']) }}">
+    <input type="file" name="image" accept="image/*" required>
+    <select name="loai_anh">
+      {% for t in image_types %}<option>{{ t }}</option>{% endfor %}
+    </select>
+    <input type="text" name="ghi_chu" placeholder="Ghi chú (tùy chọn)">
+    <button type="submit" class="btn">Tải ảnh lên</button>
+  </form>
+  {% endif %}
+  <div class="gallery">
+    {% for img in images %}
+    <figure>
+      <a href="{{ url_for('static', filename=img['file_path']) }}" class="js-lightbox" data-alt="{{ img['loai_anh'] }}">
+        <img src="{{ url_for('static', filename=img['file_path']) }}" alt="{{ img['loai_anh'] }}">
+      </a>
+      <figcaption>{{ img['loai_anh'] }}{% if img['ghi_chu'] %} — {{ img['ghi_chu'] }}{% endif %}
+        <span class="muted small">{{ img['uploaded_at'] }} · {{ img['username'] or '' }}</span>
+      </figcaption>
+      {% if can('duyet_mau') or img['uploaded_by'] == g.current_user['id'] %}
+      <form method="post" action="{{ url_for('colors.delete_image', color_id=color['id'], image_id=img['id']) }}"
+            onsubmit="return confirm('Xóa ảnh này?')" style="margin-top:6px">
+        <button type="submit" class="btn btn-sm btn-danger" style="width:100%">Xóa ảnh</button>
+      </form>
+      {% endif %}
+    </figure>
+    {% else %}
+    <p class="muted">Chưa có ảnh nào.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Lịch sử phiên bản ({{ versions|length }})</h2>
+  <div class="table-wrap">
+  <table class="data-table responsive-stack versions-table">
+    <thead><tr><th>Phiên bản</th><th>Trạng thái</th><th>Ghi chú</th><th>Ngày tạo</th><th style="width:260px"></th></tr></thead>
+    <tbody>
+      {% for v in versions %}
+      <tr>
+        <td><b>V{{ v['version_number'] }}</b>{% if v['is_active'] %} <span class="badge badge-ok">ĐANG DÙNG</span>{% endif %}</td>
+        <td><span class="badge badge-{{ duyet_badge[v['trang_thai_duyet']] }}">{{ duyet_labels[v['trang_thai_duyet']] }}</span></td>
+        <td class="small detail-cell">{{ v['ghi_chu'] or '—' }}{% if v['trang_thai_duyet'] == 'TU_CHOI' and v['ly_do_tu_choi'] %}<br><span class="muted">Lý do từ chối: {{ v['ly_do_tu_choi'] }}</span>{% endif %}</td>
+        <td class="small">{{ v['created_at'] }}</td>
+        <td style="white-space:nowrap">
+          <a class="btn btn-sm" href="{{ url_for('colors.version_detail', color_id=color['id'], version_id=v['id']) }}">Xem</a>
+          {% if can_edit_version(v) %}
+          <a class="btn btn-sm" href="{{ url_for('colors.edit_version', color_id=color['id'], version_id=v['id']) }}">Sửa</a>
+          {% endif %}
+          {% if can('duyet_mau') and v['trang_thai_duyet'] == 'CHO_DUYET' %}
+          <form method="post" action="{{ url_for('colors.approve_version', color_id=color['id'], version_id=v['id']) }}" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-primary">Duyệt</button>
+          </form>
+          <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('reject-{{ v['id'] }}').classList.toggle('hidden-form')">Từ chối</button>
+          {% endif %}
+          {% if can_activate and v['trang_thai_duyet'] == 'DA_DUYET' and not v['is_active'] %}
+          <form method="post" action="{{ url_for('colors.activate_version', color_id=color['id'], version_id=v['id']) }}" style="display:inline"
+                onsubmit="return confirm('Đặt V{{ v['version_number'] }} làm bản đang dùng?')">
+            <button type="submit" class="btn btn-sm">Dùng lại</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% if can('duyet_mau') and v['trang_thai_duyet'] == 'CHO_DUYET' %}
+      <tr id="reject-{{ v['id'] }}" class="hidden-form">
+        <td colspan="5">
+          <form method="post" action="{{ url_for('colors.reject_version', color_id=color['id'], version_id=v['id']) }}" style="display:flex;gap:8px;margin:0">
+            <input type="text" name="ly_do" placeholder="Lý do từ chối (tùy chọn)" style="flex:1">
+            <button type="submit" class="btn btn-sm btn-danger">Xác nhận từ chối V{{ v['version_number'] }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="5" class="muted">Chưa có phiên bản nào.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+{% if similar_colors %}
+<section class="card">
+  <h2>Màu gần giống</h2>
+  <div class="color-grid">
+    {% for r in similar_colors %}
+    <a class="color-card" href="{{ url_for('colors.detail', color_id=r.color['id']) }}">
+      <div class="swatch" style="background: {{ r.color['hex_color'] }}"></div>
+      <div class="card-body">
+        <div class="card-title">
+          <b>{{ r.color['ma_mau'] }}</b>
+          <span class="badge badge-{{ 'ok' if r.similarity_pct >= 90 else ('warn' if r.similarity_pct < 60 else 'muted') }}">{{ r.similarity_pct }}% giống</span>
+        </div>
+        <div class="card-sub">{{ r.color['ten_mau'] or 'Chưa đặt tên' }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<style>.hidden-form{display:none}</style>
+{% endblock %}

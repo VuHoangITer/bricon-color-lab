@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Quản lý người dùng – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Quản lý người dùng</h1>
+</div>
+
+<section class="card">
+  <h2>Chức năng theo từng vai trò</h2>
+  <div class="table-wrap">
+  <table class="data-table responsive-stack roles-table">
+    <thead><tr><th style="width:140px">Vai trò</th><th>Được phép làm</th></tr></thead>
+    <tbody>
+      {% for r in roles %}
+      <tr>
+        <td><b>{{ role_labels[r] }}</b></td>
+        <td class="small">{{ role_permissions[r]|join(', ') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted small">Khách hàng có thể được cấp thêm riêng "Tạo màu mới" / "Tạo pigment" ở bảng danh sách bên dưới — không thể cấp thêm chức năng nào khác ngoài 2 quyền này.</p>
+</section>
+
+<section class="card">
+  <h2>Tạo tài khoản mới</h2>
+  <form method="post" action="{{ url_for('users.new') }}">
+    <div class="form-grid">
+      <label>Tên đăng nhập <input type="text" name="username" required></label>
+      <label>Mật khẩu <input type="password" name="password" required></label>
+      <label>Họ tên <input type="text" name="full_name"></label>
+      <label>Vai trò
+        <select name="role">
+          {% for r in roles %}<option value="{{ r }}">{{ role_labels[r] }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Danh sách người dùng</h2>
+  <div class="table-wrap">
+  <table class="data-table responsive-stack users-table">
+    <thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th>Quyền riêng (khách hàng đặc biệt)</th><th>Đặt lại mật khẩu</th><th style="width:220px">Khóa / Xóa</th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td><b>{{ u['username'] }}</b></td>
+        <td>{{ u['full_name'] or '—' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('users.set_role', user_id=u['id']) }}" class="inline-form" style="margin:0">
+            <select name="role" onchange="this.form.requestSubmit()">
+              {% for r in roles %}<option value="{{ r }}" {{ 'selected' if u['role']==r }}>{{ role_labels[r] }}</option>{% endfor %}
+            </select>
+          </form>
+        </td>
+        <td>
+          {% if u['is_active'] %}
+          <span class="badge badge-ok">Đang hoạt động</span>
+          {% else %}
+          <span class="badge badge-muted">Đã khóa{% if u['deactivated_at'] %}<br>{{ u['deactivated_at'] }}{% endif %}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u['role'] == khach_hang_role %}
+          <form method="post" action="{{ url_for('users.set_permissions', user_id=u['id']) }}" style="margin:0">
+            {% for p in grantable %}
+            <label class="small" style="display:inline-flex;align-items:center;gap:4px;font-weight:400;margin:0 10px 0 0">
+              <input type="checkbox" name="perm" value="{{ p }}" {{ 'checked' if p in grants.get(u['id'], []) }} onchange="this.form.requestSubmit()">
+              {{ perm_labels.get(p, p) }}
+            </label>
+            {% endfor %}
+          </form>
+          {% else %}
+          <span class="muted small">Không áp dụng — chỉ dùng cho Khách hàng</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="post" action="{{ url_for('users.reset_password', user_id=u['id']) }}" class="inline-form" style="margin:0" onsubmit="return confirm('Đặt lại mật khẩu cho {{ u['username'] }}?')">
+            <input type="password" name="password" placeholder="Mật khẩu mới" required style="min-width:140px">
+            <button type="submit" class="btn btn-sm">Đặt lại</button>
+          </form>
+        </td>
+        <td style="white-space:nowrap">
+          {% if u['id'] == g.current_user['id'] %}
+          <span class="muted small">Tài khoản của bạn</span>
+          {% else %}
+            {% if u['is_active'] %}
+            <form method="post" action="{{ url_for('users.deactivate', user_id=u['id']) }}" style="display:inline;margin:0"
+                  onsubmit="return confirm('Khóa tài khoản {{ u['username'] }}? Tài khoản sẽ không đăng nhập được cho tới khi mở khóa lại.')">
+              <button type="submit" class="btn btn-sm">Khóa</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url_for('users.reactivate', user_id=u['id']) }}" style="display:inline;margin:0">
+              <button type="submit" class="btn btn-sm">Mở khóa</button>
+            </form>
+            {% endif %}
+
+            {% set ds = delete_status.get(u['id']) %}
+            {% if ds and ds.eligible %}
+            <form method="post" action="{{ url_for('users.delete', user_id=u['id']) }}" style="display:inline;margin:0"
+                  onsubmit="return confirm('XÓA VĨNH VIỄN tài khoản {{ u['username'] }}? Không thể hoàn tác.')">
+              <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+            </form>
+            {% elif ds %}
+            <span class="muted small" title="{{ ds.reason }}">Chưa xóa được</span>
+            {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted small">
+    Quyền riêng chỉ áp dụng thêm cho vai trò Khách hàng (dùng cho khách hàng đặc biệt được phép tạo màu/pigment). Không thể cấp quyền sửa, xóa, duyệt hay xuất PDF cho Khách hàng dù bật gì ở đây.<br>
+    Tài khoản <b>chưa từng tạo màu/pigment/log gì</b> có thể xóa ngay. Tài khoản <b>đã có hoạt động</b> phải khóa trước, đủ 6 tháng mới xóa vĩnh viễn được — dữ liệu (màu, phiên bản, ảnh) vẫn giữ nguyên, chỉ nhật ký hoạt động của tài khoản đó sẽ bị ẩn sau khi xóa.
+  </p>
+</section>
+{% endblock %}

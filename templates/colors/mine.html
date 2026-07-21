@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Công thức của tôi – BRICON COLOR LAB{% endblock %}
+{% block content %}
+{% set duyet_labels = {'CHO_DUYET': 'CHỜ DUYỆT', 'TU_CHOI': 'TỪ CHỐI'} %}
+{% set duyet_badge = {'CHO_DUYET': 'muted', 'TU_CHOI': 'warn'} %}
+<div class="page-head">
+  <h1>Công thức của tôi</h1>
+</div>
+<p class="muted small">Các phiên bản bạn tạo đang CHỜ DUYỆT hoặc bị TỪ CHỐI.</p>
+<div class="table-wrap">
+<table class="data-table responsive-stack mine-table">
+  <thead><tr><th>Mã màu</th><th>Phiên bản</th><th>Trạng thái</th><th>Lý do từ chối</th><th style="width:230px"></th></tr></thead>
+  <tbody>
+    {% for v in items %}
+    <tr>
+      <td><b>{{ v['ma_mau'] }}</b>{% if v['ten_mau'] %} — {{ v['ten_mau'] }}{% endif %}</td>
+      <td>V{{ v['version_number'] }}</td>
+      <td><span class="badge badge-{{ duyet_badge[v['trang_thai_duyet']] }}">{{ duyet_labels[v['trang_thai_duyet']] }}</span></td>
+      <td class="small detail-cell">{{ v['ly_do_tu_choi'] or '—' }}</td>
+      <td style="white-space:nowrap">
+        <a class="btn btn-sm" href="{{ url_for('colors.detail', color_id=v['color_id']) }}">Xem</a>
+        <a class="btn btn-sm btn-primary" href="{{ url_for('colors.edit_version', color_id=v['color_id'], version_id=v['id']) }}">
+          {{ 'Sửa & gửi lại' if v['trang_thai_duyet'] == 'TU_CHOI' else 'Sửa' }}
+        </a>
+        <form method="post" action="{{ url_for('colors.delete_version', color_id=v['color_id'], version_id=v['id']) }}" style="display:inline"
+              onsubmit="return confirm('Xóa phiên bản V{{ v['version_number'] }} này? Không thể hoàn tác.')">
+          <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">Không có phiên bản nào đang chờ duyệt hoặc bị từ chối.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

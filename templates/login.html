@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="login-box">
+  <h1>Đăng nhập</h1>
+  <form method="post">
+    <label>Tên đăng nhập
+      <input type="text" name="username" required autofocus>
+    </label>
+    <label>Mật khẩu
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit" class="btn btn-primary">Đăng nhập</button>
+  </form>
+</div>
+{% endblock %}

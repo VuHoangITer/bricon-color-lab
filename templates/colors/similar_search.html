@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Tìm màu gần giống – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Tìm màu gần giống</h1>
+</div>
+
+<section class="card">
+  <form method="get">
+    <div class="hex-row" style="max-width:500px">
+      <input type="color" id="hexPicker" value="{{ hex_query if hex_query else '#cccccc' }}">
+      <input type="text" name="hex" id="hexText" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$"
+             placeholder="#RRGGBB" value="{{ hex_query }}" required>
+      <span class="muted small">Chọn màu hoặc gõ mã HEX rồi bấm Tìm — hệ thống so với mã HEX các màu đang có trong thư viện.</span>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Tìm</button>
+    </div>
+  </form>
+</section>
+
+{% if hex_query %}
+<h2 style="margin:18px 0 12px">Kết quả — {{ results|length }} màu gần giống nhất</h2>
+<div class="color-grid">
+  {% for r in results %}
+  <a class="color-card" href="{{ url_for('colors.detail', color_id=r.color['id']) }}">
+    <div class="swatch" style="background: {{ r.color['hex_color'] }}"></div>
+    <div class="card-body">
+      <div class="card-title">
+        <b>{{ r.color['ma_mau'] }}</b>
+        <span class="badge badge-{{ 'ok' if r.similarity_pct >= 90 else ('warn' if r.similarity_pct < 60 else 'muted') }}">{{ r.similarity_pct }}% giống</span>
+      </div>
+      <div class="card-sub">{{ r.color['ten_mau'] or 'Chưa đặt tên' }} · {{ r.color['hex_color'] }}</div>
+    </div>
+  </a>
+  {% else %}
+  <p class="muted">Chưa có màu nào trong thư viện khai báo mã HEX để so sánh.</p>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+(function () {
+  const picker = document.getElementById('hexPicker');
+  const text = document.getElementById('hexText');
+  if (!picker || !text) return;
+  picker.addEventListener('input', () => { text.value = picker.value.toUpperCase(); });
+  text.addEventListener('input', () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(text.value.trim())) picker.value = text.value.trim();
+  });
+})();
+</script>
+{% endblock %}

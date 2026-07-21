@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Sửa phiên bản {{ version['version_number'] }} — {{ color['ma_mau'] }} – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<h1>Sửa phiên bản {{ version['version_number'] }} — Màu {{ color['ma_mau'] }}{% if color['ten_mau'] %} ({{ color['ten_mau'] }}){% endif %}</h1>
+<div class="note" style="margin-bottom:14px">
+  📌 Sửa trực tiếp phiên bản này — không tạo bản mới, không đổi số phiên bản.
+  {% if is_resubmit %}Phiên bản này đang bị <b>TỪ CHỐI</b> — lưu lại sẽ tự động <b>GỬI LẠI XIN DUYỆT</b> (chuyển về CHỜ DUYỆT, xóa lý do từ chối cũ).
+  {% elif version['trang_thai_duyet'] == 'DA_DUYET' %}Áp dụng ngay, giữ nguyên trạng thái ĐÃ DUYỆT{% if version['is_active'] %} và vẫn là bản đang dùng{% endif %}.
+  {% else %}Vẫn giữ trạng thái CHỜ DUYỆT.{% endif %}
+</div>
+
+<form method="post" class="color-form" id="colorForm">
+  <div class="form-grid">
+    <label>Mã màu *
+      <input type="text" name="ma_mau" required value="{{ color['ma_mau'] }}">
+    </label>
+    <label>Tên màu
+      <input type="text" name="ten_mau" value="{{ color['ten_mau'] or '' }}">
+    </label>
+  </div>
+  <label>Ghi chú chung của màu
+    <input type="text" name="ghi_chu" value="{{ color['ghi_chu'] or '' }}">
+  </label>
+
+  <label>Màu hiển thị (HEX)
+    <div class="hex-row">
+      <input type="color" id="hexPicker" value="{{ color['hex_color'] or '#cccccc' }}">
+      <input type="text" name="hex_color" id="hexText" maxlength="7"
+             pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB"
+             value="{{ color['hex_color'] or '' }}">
+      <span class="muted small">Đổi thông tin ở trên áp dụng ngay, không cần duyệt.</span>
+    </div>
+  </label>
+
+  <label>Ghi chú phiên bản
+    <input type="text" name="version_ghi_chu" value="{{ version['ghi_chu'] or '' }}">
+  </label>
+
+  <h2>Tỷ lệ pigment (%) — tổng phải đúng 100%</h2>
+  <div class="pigment-grid">
+    {% for p in pigments %}
+    <label>{{ p['name'] }}
+      <input type="number" step="any" min="0" max="100" class="pigment-input"
+             name="pigment_{{ p['id'] }}"
+             value="{{ values.get(p['id'], '') if values.get(p['id']) else '' }}"
+             placeholder="0">
+    </label>
+    {% endfor %}
+  </div>
+
+  <div class="total-bar">
+    Tổng: <b id="totalPct">0%</b>
+    <span id="totalStatus" class="badge badge-muted">CHƯA KHAI BÁO</span>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" id="submitBtn">Lưu thay đổi</button>
+    <a class="btn" href="{{ url_for('colors.detail', color_id=color['id']) }}">Hủy</a>
+  </div>
+</form>
+<script src="{{ url_for('static', filename='js/color_form.js') }}"></script>
+{% endblock %}

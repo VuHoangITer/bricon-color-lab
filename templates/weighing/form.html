@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Phiếu cân {{ d.color['ma_mau'] }} – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<h1>Tạo phiếu cân — Màu {{ d.color['ma_mau'] }}{% if d.color['ten_mau'] %} ({{ d.color['ten_mau'] }}){% endif %}</h1>
+
+{% if d.status != 'ĐẠT' %}
+<div class="flash flash-warning">⚠️ Công thức đang ở trạng thái <b>{{ d.status }}</b> — nên kiểm tra lại trước khi cân thật.</div>
+{% endif %}
+
+<div class="detail-grid">
+  <form method="post" class="card" id="weighingForm"
+        data-ratios='{{ d.active_rows|map(attribute="ty_le")|list|tojson }}'
+        data-names='{{ d.active_rows|map(attribute="name")|list|tojson }}'>
+    <h2>Thông số nhập</h2>
+    <label>Tổng thành phẩm cần làm (g)
+      <input type="number" step="any" min="1" name="tong_thanh_pham" id="tongTP" value="100000" required autofocus>
+    </label>
+    <label>Tỷ lệ pigment trong thành phẩm (%) — mặc định {{ default_ty_le|int }}%
+      <input type="number" step="any" min="0.001" max="99.999" name="ty_le_pigment" id="tyLePigment"
+             value="{{ default_ty_le|int }}" required>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Tạo phiếu cân</button>
+      <a class="btn" href="{{ url_for('colors.detail', color_id=d.color['id']) }}">Quay lại</a>
+    </div>
+    <p class="muted small">Phiếu cân chỉ tính trong phiên này (có thể in / xuất PDF), không lưu lịch sử — mọi lần tạo đều được ghi vào nhật ký hoạt động.</p>
+  </form>
+
+  <section class="card">
+    <h2>Xem trước</h2>
+    <table class="data-table" id="previewTable">
+      <thead><tr><th>Nguyên liệu</th><th class="num">Khối lượng (g)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='js/weighing_form.js') }}"></script>
+{% endblock %}
