@@ -4,6 +4,7 @@ from routes.weighing import bp as weighing_bp
 from routes.logs import bp as logs_bp
 from routes.pigments import bp as pigments_bp
 from routes.users import bp as users_bp
+from routes.images import bp as images_bp
 
 
 def register_blueprints(app):
@@ -13,3 +14,4 @@ def register_blueprints(app):
     app.register_blueprint(logs_bp)
     app.register_blueprint(pigments_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(images_bp)

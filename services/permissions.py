@@ -30,7 +30,7 @@ ROLE_DEFAULTS = {
         "xem_mau", "tao_mau", "sua_mau", "duyet_mau",
         "tao_pigment", "sua_pigment", "xoa_pigment",
         "tao_phieu_can", "xuat_pdf", "upload_anh", "xem_qr", "tao_qr",
-        "xem_nhat_ky", "quan_ly_nguoi_dung",
+        "xem_nhat_ky", "quan_ly_nguoi_dung", "quan_ly_anh",
     },
     ROLE_QUAN_LY: {
         "xem_mau", "tao_mau", "sua_mau", "duyet_mau",
@@ -65,6 +65,7 @@ PERM_LABELS = {
     "tao_qr": "Sinh mã QR",
     "xem_nhat_ky": "Xem nhật ký thao tác",
     "quan_ly_nguoi_dung": "Quản lý người dùng",
+    "quan_ly_anh": "Thư viện ảnh (xem/xóa toàn bộ ảnh hệ thống)",
 }
 
 # Quyền không bao giờ được có ở vai trò khách hàng, dù cấp thêm kiểu gì

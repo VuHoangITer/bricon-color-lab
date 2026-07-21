@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Thư viện ảnh – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Thư viện ảnh</h1>
+</div>
+
+<form method="get" class="inline-form filter-form">
+  <select name="color_id">
+    <option value="">— Tất cả màu —</option>
+    {% for c in colors %}
+    <option value="{{ c['id'] }}" {{ 'selected' if f_color == c['id'] }}>Màu {{ c['ma_mau'] }}{% if c['ten_mau'] %} — {{ c['ten_mau'] }}{% endif %}</option>
+    {% endfor %}
+  </select>
+  <select name="uploaded_by">
+    <option value="">— Tất cả người tải —</option>
+    {% for u in users %}
+    <option value="{{ u['id'] }}" {{ 'selected' if f_user == u['id'] }}>{{ u['full_name'] or u['username'] }}</option>
+    {% endfor %}
+  </select>
+  <select name="loai_anh">
+    <option value="">— Tất cả loại ảnh —</option>
+    {% for t in image_types %}
+    <option value="{{ t }}" {{ 'selected' if f_loai == t }}>{{ t }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn">Lọc</button>
+  <a class="btn" href="{{ url_for('images.index') }}">Xóa lọc</a>
+</form>
+
+<p class="muted small">{{ total }} ảnh — trang {{ page }}/{{ total_pages }}</p>
+
+<div class="gallery">
+  {% for img in images %}
+  <figure>
+    <a href="{{ url_for('static', filename=img['file_path']) }}" class="js-lightbox" data-alt="{{ img['loai_anh'] }}">
+      <img src="{{ url_for('static', filename=img['file_path']) }}" alt="{{ img['loai_anh'] }}">
+    </a>
+    <figcaption>
+      <a href="{{ url_for('colors.detail', color_id=img['color_id']) }}"><b>Màu {{ img['ma_mau'] }}</b></a>
+      {% if img['ten_mau'] %} — {{ img['ten_mau'] }}{% endif %}<br>
+      {{ img['loai_anh'] }}{% if img['ghi_chu'] %} — {{ img['ghi_chu'] }}{% endif %}
+      <span class="muted small">{{ img['uploaded_at'] }} · {{ img['full_name'] or img['username'] or '—' }}</span>
+    </figcaption>
+    <form method="post" action="{{ url_for('images.delete', image_id=img['id'], page=page) }}"
+          onsubmit="return confirm('Xóa ảnh này? Không thể hoàn tác.')" style="margin-top:6px">
+      <button type="submit" class="btn btn-sm btn-danger" style="width:100%">Xóa ảnh</button>
+    </form>
+  </figure>
+  {% else %}
+  <p class="muted">Không có ảnh nào khớp bộ lọc.</p>
+  {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="pagination no-print" aria-label="Phân trang thư viện ảnh">
+  {% if page > 1 %}
+  <a class="btn btn-sm" href="{{ url_for('images.index', color_id=f_color, uploaded_by=f_user, loai_anh=f_loai, page=1) }}">« Đầu</a>
+  <a class="btn btn-sm" href="{{ url_for('images.index', color_id=f_color, uploaded_by=f_user, loai_anh=f_loai, page=page-1) }}">‹ Trước</a>
+  {% else %}
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">« Đầu</span>
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">‹ Trước</span>
+  {% endif %}
+
+  <span class="pagination-pages">
+    {% for p in page_range %}
+      {% if p == '…' %}
+      <span class="pagination-ellipsis">…</span>
+      {% elif p == page %}
+      <span class="btn btn-sm btn-primary pagination-current" aria-current="page">{{ p }}</span>
+      {% else %}
+      <a class="btn btn-sm" href="{{ url_for('images.index', color_id=f_color, uploaded_by=f_user, loai_anh=f_loai, page=p) }}">{{ p }}</a>
+      {% endif %}
+    {% endfor %}
+  </span>
+
+  {% if page < total_pages %}
+  <a class="btn btn-sm" href="{{ url_for('images.index', color_id=f_color, uploaded_by=f_user, loai_anh=f_loai, page=page+1) }}">Sau ›</a>
+  <a class="btn btn-sm" href="{{ url_for('images.index', color_id=f_color, uploaded_by=f_user, loai_anh=f_loai, page=total_pages) }}">Cuối »</a>
+  {% else %}
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">Sau ›</span>
+  <span class="btn btn-sm btn-disabled" aria-disabled="true">Cuối »</span>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

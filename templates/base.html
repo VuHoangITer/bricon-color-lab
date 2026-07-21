@@ -24,7 +24,7 @@
       {% if can('tao_mau') %}
       <a class="nav-item {{ 'active' if request.endpoint in ['colors.new', 'colors.edit'] else '' }}" href="{{ url_for('colors.new') }}"><span class="nav-icon">＋</span><span>Tạo màu mới</span></a>
       <a class="nav-item {{ 'active' if request.endpoint == 'colors.mine' else '' }}" href="{{ url_for('colors.mine') }}">
-        <span class="nav-icon">🔔</span><span>Của tôi</span>
+        <span class="nav-icon">🔉</span><span>Thông báo</span>
         {% if g.get('my_pending_count', 0) > 0 %}<span class="badge badge-warn" style="margin-left:auto">{{ g.my_pending_count }}</span>{% endif %}
       </a>
       {% endif %}
@@ -37,13 +37,16 @@
       {% if can('tao_pigment') %}
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('pigments.') else '' }}" href="{{ url_for('pigments.index') }}"><span class="nav-icon">◉</span><span>Quản lý pigment</span></a>
       {% endif %}
-      {% if can('xem_nhat_ky') or can('quan_ly_nguoi_dung') %}
+      {% if can('xem_nhat_ky') or can('quan_ly_nguoi_dung') or can('quan_ly_anh') %}
       <p class="nav-label">HỆ THỐNG</p>
       {% if can('xem_nhat_ky') %}
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('logs.') else '' }}" href="{{ url_for('logs.index') }}"><span class="nav-icon">≡</span><span>Nhật ký thao tác</span></a>
       {% endif %}
+      {% if can('quan_ly_anh') %}
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('images.') else '' }}" href="{{ url_for('images.index') }}"><span class="nav-icon">🖼️</span><span>Thư viện ảnh</span></a>
+      {% endif %}
       {% if can('quan_ly_nguoi_dung') %}
-      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('users.') else '' }}" href="{{ url_for('users.index') }}"><span class="nav-icon">👤</span><span>Quản lý người dùng</span></a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('users.') else '' }}" href="{{ url_for('users.index') }}"><span class="nav-icon">𐀪</span><span>Quản lý người dùng</span></a>
       {% endif %}
       {% endif %}
     </nav>
