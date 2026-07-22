@@ -119,3 +119,23 @@ class ActivityLog(db.Model):
     detail = db.Column(db.Text)
     hidden = db.Column(db.Integer, nullable=False, server_default="0")
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
+
+
+class WeighingRecord(db.Model):
+    """Bản ghi CỐ ĐỊNH (snapshot) của 1 lần tạo phiếu cân — dùng để sinh
+    link public qua QR. Toàn bộ thông tin hiển thị (mã màu, tên màu, người
+    tạo, ngày) được CHỤP LẠI thành text ngay lúc tạo, không tham chiếu sống
+    tới colors/users — nên dù công thức/tên màu đổi, hay tài khoản người
+    tạo bị xóa, thông tin public vẫn giữ nguyên y hệt lúc cân."""
+    __tablename__ = "weighing_records"
+    id = db.Column(db.Integer, primary_key=True)
+    public_token = db.Column(db.Text, unique=True, nullable=False)
+    color_id = db.Column(db.Integer, db.ForeignKey("colors.id", ondelete="SET NULL"))
+    ma_mau = db.Column(db.Text, nullable=False)
+    ten_mau = db.Column(db.Text)
+    tong_thanh_pham_g = db.Column(REAL, nullable=False)
+    ty_le_pigment = db.Column(REAL, nullable=False)
+    nguoi_tao = db.Column(db.Text, nullable=False)
+    ngay_tao = db.Column(db.Text, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())

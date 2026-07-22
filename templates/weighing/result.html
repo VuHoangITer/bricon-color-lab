@@ -18,13 +18,21 @@
 
 <div class="print-sheet">
   <h2 class="print-only">BRICON – PHIẾU CÂN MÀU SẢN XUẤT</h2>
-  <p>
-    Mã màu: <b>{{ d.color['ma_mau'] }}</b>
-    {% if d.color['ten_mau'] %} · Tên màu: {{ d.color['ten_mau'] }}{% endif %}<br>
-    Tổng thành phẩm: <b>{{ calc.tong_thanh_pham_g|gram }} g</b>
-    · Tỷ lệ pigment: <b>{{ calc.ty_le_pigment|pct }}</b><br>
-    Người tạo: {{ g.current_user['full_name'] or g.current_user['username'] }} · Ngày: {{ now }}
-  </p>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+    <p style="flex:1;min-width:260px">
+      Mã màu: <b>{{ d.color['ma_mau'] }}</b>
+      {% if d.color['ten_mau'] %} · Tên màu: {{ d.color['ten_mau'] }}{% endif %}<br>
+      Tổng thành phẩm: <b>{{ calc.tong_thanh_pham_g|gram }} g</b>
+      · Tỷ lệ pigment: <b>{{ calc.ty_le_pigment|pct }}</b><br>
+      Người tạo: {{ g.current_user['full_name'] or g.current_user['username'] }} · Ngày: {{ now }}
+    </p>
+    <div style="text-align:center;flex-shrink:0">
+      {% if qr_data_uri %}
+      <img src="{{ qr_data_uri }}" alt="QR thông tin phiếu cân" style="width:110px;height:110px;display:block">
+      <span class="muted small">Quét xem thông tin phiếu cân</span>
+      {% endif %}
+    </div>
+  </div>
 
   <table class="data-table">
     <thead><tr><th>STT</th><th>Nguyên liệu cần cân</th><th class="num">Tỷ lệ thành phẩm</th><th class="num">Khối lượng (g)</th></tr></thead>

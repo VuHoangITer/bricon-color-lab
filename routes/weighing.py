@@ -6,9 +6,10 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 import config
 from models import color as color_model
 from models import color_version
+from models import weighing as weighing_model
 from models.activity_log import log
 from routes.auth import permission_required
-from services import calculator, pdf_service
+from services import calculator, pdf_service, qr_service
 
 bp = Blueprint("weighing", __name__)
 
@@ -55,10 +56,16 @@ def new(color_id):
             flash(str(e), "error")
             return render_template("weighing/form.html", d=d,
                                    default_ty_le=DEFAULT_TY_LE_PIGMENT)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        nguoi_tao = (g.current_user["full_name"] or g.current_user["username"]) if g.current_user else "—"
+        token = weighing_model.create(
+            color_id=color_id, ma_mau=d["color"]["ma_mau"], ten_mau=d["color"]["ten_mau"],
+            tong_thanh_pham_g=tong, ty_le_pigment=ty_le, nguoi_tao=nguoi_tao,
+            ngay_tao=now, created_by=session["user_id"])
         log(session["user_id"], "TẠO PHIẾU CÂN", "color", color_id,
             {"ma_mau": d["color"]["ma_mau"], "tong_g": tong, "ty_le_pigment": ty_le})
         return redirect(url_for("weighing.result", color_id=color_id,
-                                tong_thanh_pham=tong, ty_le_pigment=ty_le * 100))
+                                tong_thanh_pham=tong, ty_le_pigment=ty_le * 100, record=token))
     return render_template("weighing/form.html", d=d,
                            default_ty_le=DEFAULT_TY_LE_PIGMENT)
 
@@ -79,7 +86,14 @@ def result(color_id):
         return redirect(url_for("weighing.new", color_id=color_id))
     calc = calculator.calculate(tong, ty_le, d["pigment_rows"])
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return render_template("weighing/result.html", d=d, calc=calc, now=now)
+
+    qr_data_uri = None
+    record_token = request.args.get("record")
+    if record_token:
+        qr_url = config.BASE_URL + url_for("public.phieu_can", token=record_token)
+        qr_data_uri = qr_service.generate_data_uri(qr_url)
+
+    return render_template("weighing/result.html", d=d, calc=calc, now=now, qr_data_uri=qr_data_uri)
 
 
 @bp.route("/colors/<int:color_id>/weighing/pdf")
