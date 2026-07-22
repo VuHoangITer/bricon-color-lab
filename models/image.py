@@ -69,3 +69,13 @@ def delete(image_id):
     db = get_db()
     db.execute("DELETE FROM color_images WHERE id = %s", (image_id,))
     db.commit()
+
+
+def delete_by_path(file_path):
+    """Xóa dòng color_images khớp đúng file_path (nếu có) — dùng khi xóa
+    file trực tiếp qua trang quét đĩa, tránh còn sót DB row trỏ tới file đã
+    mất (ảnh vỡ trên trang chi tiết màu). Không báo lỗi nếu không có dòng
+    nào khớp — file có thể vốn đã là 'mồ côi' (chưa từng có trong DB)."""
+    db = get_db()
+    db.execute("DELETE FROM color_images WHERE file_path = %s", (file_path,))
+    db.commit()

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}PDF phiếu cân – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Thư viện ảnh</h1>
+</div>
+
+{% include "images/_tabs.html" %}
+
+<p class="muted small">{{ total_count }} file — tổng dung lượng {{ total_size }}. Danh sách này quét trực tiếp trên đĩa (không lưu trong database), vì mỗi lần xuất PDF chỉ tạo file rồi tải về, không ghi lịch sử.</p>
+
+<div class="table-wrap">
+<table class="data-table responsive-stack">
+  <thead><tr><th>Tên file</th><th>Mã màu</th><th>Dung lượng</th><th>Ngày tạo</th><th style="width:100px"></th></tr></thead>
+  <tbody>
+    {% for f in files %}
+    <tr>
+      <td class="small">{{ f['name'] }}</td>
+      <td>{% if f['ma_mau'] %}<b>{{ f['ma_mau'] }}</b>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="num">{{ f['size'] }}</td>
+      <td class="small">{{ f['mtime'] }}</td>
+      <td>
+        <form method="post" action="{{ url_for('images.pdf_delete') }}"
+              onsubmit="return confirm('Xóa file {{ f['name'] }}?')" style="margin:0">
+          <input type="hidden" name="filename" value="{{ f['name'] }}">
+          <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">Chưa có file PDF nào.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
