@@ -129,28 +129,6 @@ def is_ready_for_weighing(color_id):
     return d is not None and d["status"] == "ĐẠT"
 
 
-def set_qr_path(color_id, path):
-    db = get_db()
-    db.execute("UPDATE colors SET qr_code_path=%s WHERE id=%s", (path, color_id))
-    db.commit()
-
-
-def clear_qr_path(color_id):
-    """Gỡ đường dẫn QR khỏi màu (dùng khi xóa file QR qua trang quản lý) —
-    màu vẫn còn nguyên, chỉ là chưa có QR, trang chi tiết màu sẽ tự hiện
-    lại nút 'Sinh mã QR' để tạo lại khi cần."""
-    db = get_db()
-    db.execute("UPDATE colors SET qr_code_path=NULL WHERE id=%s", (color_id,))
-    db.commit()
-
-
-def list_with_qr():
-    """Toàn bộ màu đang có mã QR — dùng cho trang quản lý QR (admin)."""
-    return get_db().execute(
-        "SELECT id, ma_mau, ten_mau, qr_code_path FROM colors WHERE qr_code_path IS NOT NULL ORDER BY id DESC"
-    ).fetchall()
-
-
 def _hex_to_rgb(hex_color):
     if not hex_color:
         return None

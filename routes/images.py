@@ -131,63 +131,6 @@ def delete():
     return redirect(url_for("images.index", page=request.args.get("page", type=int)))
 
 
-# ---------- Tab Mã QR ----------
-
-def _list_qr_files():
-    folder = config.QR_FOLDER
-    if not folder.exists():
-        return []
-    files = []
-    for p in folder.iterdir():
-        if not p.is_file():
-            continue
-        stat = p.stat()
-        m = re.match(r"^color_(\d+)\.png$", p.name)
-        color_id = int(m.group(1)) if m else None
-        c = color_model.get(color_id) if color_id else None
-        ma_mau = c["ma_mau"] if c else None
-        tracked = bool(c and c["qr_code_path"] and Path(c["qr_code_path"]).name == p.name)
-        files.append({
-            "name": p.name,
-            "size": _fmt_size(stat.st_size),
-            "mtime": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-            "mtime_sort": stat.st_mtime,
-            "color_id": color_id,
-            "ma_mau": ma_mau,
-            "tracked": tracked,
-        })
-    files.sort(key=lambda f: f["mtime_sort"], reverse=True)
-    return files
-
-
-@bp.route("/anh/qr")
-@permission_required("quan_ly_anh")
-def qr_list():
-    files = _list_qr_files()
-    return render_template("images/qr_list.html", files=files, active_tab="qr")
-
-
-@bp.route("/anh/qr/delete", methods=["POST"])
-@permission_required("quan_ly_anh")
-def qr_delete():
-    filename = Path(request.form.get("filename") or "").name
-    if not filename:
-        flash("Tên file không hợp lệ.", "error")
-        return redirect(url_for("images.qr_list"))
-    m = re.match(r"^color_(\d+)\.png$", filename)
-    if m:
-        color_id = int(m.group(1))
-        c = color_model.get(color_id)
-        if c and c["qr_code_path"] and Path(c["qr_code_path"]).name == filename:
-            color_model.clear_qr_path(color_id)
-    try:
-        (config.QR_FOLDER / filename).unlink(missing_ok=True)
-    except Exception:
-        pass
-    log(session["user_id"], "XÓA QR", None, None, {"file": filename})
-    flash(f"Đã xóa file '{filename}'.", "success")
-    return redirect(url_for("images.qr_list"))
-
 
 # ---------- Tab PDF ----------
 
