@@ -58,24 +58,12 @@
   </section>
 
   <section class="card">
-    <h2>Mã QR</h2>
-    {% if can('xem_qr') %}
-      {% if not active_detail %}
-        <p class="muted">QR sẽ được tự động sinh khi có phiên bản được duyệt.</p>
-      {% elif color['qr_code_path'] %}
-        <img class="qr-img" src="{{ url_for('static', filename=color['qr_code_path']) }}" alt="QR màu {{ color['ma_mau'] }}">
-        <a class="btn btn-sm" download="qr_{{ color['ma_mau'] }}.png"
-           href="{{ url_for('static', filename=color['qr_code_path']) }}">Tải PNG</a>
-      {% elif can('tao_qr') %}
-        <p class="muted">Chưa có mã QR.</p>
-        <form method="post" action="{{ url_for('colors.generate_qr', color_id=color['id']) }}">
-          <button class="btn btn-sm" type="submit">Sinh mã QR</button>
-        </form>
-      {% else %}
-        <p class="muted">Chưa có mã QR.</p>
-      {% endif %}
+    {% if color['hex_color'] %}
+    <div class="color-swatch-big" style="background: {{ color['hex_color'] }}"></div>
+    <p class="muted small mono" style="margin-top:10px">{{ color['hex_color'] }}</p>
     {% else %}
-      <p class="muted">Bạn không có quyền xem mã QR.</p>
+    <div class="color-swatch-big color-swatch-empty"></div>
+    <p class="muted small" style="margin-top:10px">Chưa khai báo mã HEX hiển thị.</p>
     {% endif %}
   </section>
 </div>
@@ -102,7 +90,7 @@
       <figcaption>{{ img['loai_anh'] }}{% if img['ghi_chu'] %} — {{ img['ghi_chu'] }}{% endif %}
         <span class="muted small">{{ img['uploaded_at'] }} · {{ img['username'] or '' }}</span>
       </figcaption>
-      {% if can('duyet_mau') or img['uploaded_by'] == g.current_user['id'] %}
+      {% if is_admin() %}
       <form method="post" action="{{ url_for('colors.delete_image', color_id=color['id'], image_id=img['id']) }}"
             onsubmit="return confirm('Xóa ảnh này?')" style="margin-top:6px">
         <button type="submit" class="btn btn-sm btn-danger" style="width:100%">Xóa ảnh</button>

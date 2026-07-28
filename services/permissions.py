@@ -29,21 +29,21 @@ ROLE_DEFAULTS = {
     ROLE_ADMIN: {
         "xem_mau", "tao_mau", "sua_mau", "duyet_mau",
         "tao_pigment", "sua_pigment", "xoa_pigment",
-        "tao_phieu_can", "xuat_pdf", "upload_anh", "xem_qr", "tao_qr",
+        "tao_phieu_can", "xuat_pdf", "upload_anh",
         "xem_nhat_ky", "quan_ly_nguoi_dung", "quan_ly_anh",
     },
     ROLE_QUAN_LY: {
         "xem_mau", "tao_mau", "sua_mau", "duyet_mau",
         "tao_pigment", "sua_pigment", "xoa_pigment",
-        "tao_phieu_can", "xuat_pdf", "upload_anh", "xem_qr", "tao_qr",
+        "tao_phieu_can", "xuat_pdf", "upload_anh",
         "xem_nhat_ky",
     },
     ROLE_SAN_XUAT: {
         "xem_mau", "tao_mau", "sua_mau",
-        "tao_phieu_can", "xuat_pdf", "upload_anh", "xem_qr", "tao_qr",
+        "tao_phieu_can", "xuat_pdf", "upload_anh",
     },
     ROLE_KHACH_HANG: {
-        "xem_mau", "tao_phieu_can", "xem_qr",
+        "xem_mau", "tao_phieu_can",
     },
 }
 
@@ -61,8 +61,6 @@ PERM_LABELS = {
     "tao_phieu_can": "Tạo & xem phiếu cân",
     "xuat_pdf": "In / xuất PDF phiếu cân",
     "upload_anh": "Tải ảnh lên",
-    "xem_qr": "Xem mã QR",
-    "tao_qr": "Sinh mã QR",
     "xem_nhat_ky": "Xem nhật ký thao tác",
     "quan_ly_nguoi_dung": "Quản lý người dùng",
     "quan_ly_anh": "Thư viện ảnh (xem/xóa toàn bộ ảnh hệ thống)",

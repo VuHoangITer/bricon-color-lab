@@ -11,7 +11,6 @@ from models import pigment as pigment_model
 from models import image as image_model
 from models.activity_log import log
 from routes.auth import login_required, permission_required
-from services import qr_service
 from services.permissions import ROLE_ADMIN
 
 bp = Blueprint("colors", __name__)
@@ -59,14 +58,6 @@ def _suggested_ma_mau():
     if user and user["role"] == "khach_hang":
         return color_model.next_ma_mau_khach_hang(user["username"])
     return color_model.next_ma_mau()
-
-
-def _ensure_qr(color_id):
-    """Sinh QR nếu màu CHƯA có — chỉ gọi khi màu đã có phiên bản active."""
-    c = color_model.get(color_id)
-    if c and not c["qr_code_path"]:
-        qr_path = qr_service.generate_for_color(color_id)
-        color_model.set_qr_path(color_id, qr_path)
 
 
 def _can_create_version(color):
@@ -189,13 +180,11 @@ def new():
                                session["user_id"],
                                request.form.get("anh_ghi_chu", "").strip())
 
-            if auto_approve:
-                _ensure_qr(color_id)
             log(session["user_id"], "TẠO MÀU", "color", color_id,
                 {"ma_mau": ma_mau, "phien_ban": 1,
                  "trang_thai_duyet": "DA_DUYET" if auto_approve else "CHO_DUYET"})
             if auto_approve:
-                flash("Đã tạo màu mới (tự động duyệt) và sinh mã QR.", "success")
+                flash("Đã tạo màu mới (tự động duyệt).", "success")
             else:
                 flash("Đã tạo màu mới — phiên bản 1 đang CHỜ DUYỆT, cần Quản lý/Admin duyệt trước khi cân.", "success")
             return redirect(url_for("colors.detail", color_id=color_id))
@@ -278,8 +267,6 @@ def new_version(color_id):
                 auto_approve=auto_approve,
             )
             v = color_version.get(version_id)
-            if auto_approve:
-                _ensure_qr(color_id)
             log(session["user_id"], "TẠO PHIÊN BẢN", "color", color_id,
                 {"ma_mau": ma_mau, "phien_ban": v["version_number"],
                  "cu": old_ratios, "moi": new_ratios_named,
@@ -386,7 +373,6 @@ def approve_version(color_id, version_id):
         flash(f"Không thể duyệt — tổng pigment đang {d['status']}, cần đúng 100%.", "error")
         return redirect(url_for("colors.detail", color_id=color_id))
     color_version.approve(version_id, session["user_id"])
-    _ensure_qr(color_id)
     log(session["user_id"], "DUYỆT PHIÊN BẢN", "color", color_id, {"phien_ban": v["version_number"]})
     flash("Đã duyệt phiên bản — trở thành bản đang dùng.", "success")
     return redirect(url_for("colors.detail", color_id=color_id))
@@ -496,18 +482,6 @@ def upload_image(color_id):
     flash("Đã tải ảnh lên.", "success")
     return redirect(url_for("colors.detail", color_id=color_id))
 
-
-@bp.route("/colors/<int:color_id>/generate-qr", methods=["POST"])
-@permission_required("tao_qr")
-def generate_qr(color_id):
-    if not color_model.get(color_id):
-        flash("Không tìm thấy màu này.", "error")
-        return redirect(url_for("colors.index"))
-    qr_path = qr_service.generate_for_color(color_id)
-    color_model.set_qr_path(color_id, qr_path)
-    log(session["user_id"], "TẠO QR", "color", color_id, {"file": qr_path})
-    flash("Đã sinh mã QR.", "success")
-    return redirect(url_for("colors.detail", color_id=color_id))
 
 
 def _delete_color_with_files(c):
