@@ -82,14 +82,9 @@ def _can_manage_images(color):
 
 
 def _can_delete_color(color):
-    """duyet_mau (Admin/Quản lý) -> xóa được mọi màu. Người tạo cũng xóa
-    được màu của chính mình MIỄN LÀ chưa từng có phiên bản nào được duyệt
-    (chưa có bản đang dùng) — màu đã có bản dùng thật thì chỉ Admin/Quản
-    lý mới xóa được."""
-    if "duyet_mau" in g.get("current_permissions", set()):
-        return True
-    uid = session.get("user_id")
-    return color["created_by"] == uid and color_version.get_active(color["id"]) is None
+    """CHỈ admin được xóa màu — không còn cho Quản lý hay người tạo tự xóa
+    nữa, bất kể màu đó đã có phiên bản dùng hay chưa."""
+    return _is_admin()
 
 
 def _can_delete_version(version):
@@ -438,6 +433,13 @@ def delete_version(color_id, version_id):
         return redirect(url_for("colors.detail", color_id=color_id))
     if not _can_delete_version(v):
         abort(403)
+    # Nếu đây là PHIÊN BẢN DUY NHẤT của màu, xóa nó = xóa luôn cả màu (xem
+    # đoạn cascade bên dưới) -> phải là admin, đồng bộ với quy định "chỉ
+    # admin được xóa màu". Không chặn thì Quản lý (có quyền xóa phiên bản)
+    # lách qua đường này để xóa được màu.
+    if len(color_version.list_for_color(color_id)) == 1 and not _is_admin():
+        flash("Đây là phiên bản duy nhất của màu này — xóa sẽ xóa luôn cả màu, chỉ Admin được thực hiện.", "error")
+        return redirect(url_for("colors.detail", color_id=color_id))
     was_active = bool(v["is_active"])
     vnum = v["version_number"]
     color_version.delete(version_id)
@@ -551,9 +553,9 @@ def delete_image(color_id, image_id):
     if not img or img["color_id"] != color_id:
         flash("Không tìm thấy ảnh này.", "error")
         return redirect(url_for("colors.detail", color_id=color_id))
-    is_owner = img["uploaded_by"] == session.get("user_id")
-    is_manager = "duyet_mau" in g.get("current_permissions", set())
-    if not (is_owner or is_manager):
+    # CHỈ admin được xóa ảnh — không còn cho người tự upload hay Quản lý
+    # (duyet_mau) xóa nữa.
+    if not _is_admin():
         abort(403)
     image_model.delete(image_id)
     try:
