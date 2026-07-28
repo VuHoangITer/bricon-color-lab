@@ -43,17 +43,21 @@ def get(color_id):
 
 
 def next_ma_mau():
-    """Gợi ý mã màu tiếp theo dựa trên mã màu thuần số lớn nhất hiện có
-    (vd: đang có 1..30 -> gợi ý '31'). Bỏ qua mã có ký tự khác chữ số
-    (vd: 'BR-000138'). Người dùng vẫn sửa được nếu không ưng.
+    """Gợi ý mã màu tiếp theo = số dương NHỎ NHẤT chưa được dùng trong dãy
+    mã số nội bộ (vd: đang có 1,3,5,7 -> gợi ý '2', không phải '8'). Bỏ qua
+    mã có ký tự khác chữ số (vd: 'BR-000138', 'KH-...').
     Dùng cho NỘI BỘ (admin/quản lý/sản xuất) — mã màu chính thức của công
-    ty, không tái sử dụng số đã xóa (an toàn hơn cho hàng thật ngoài xưởng)."""
-    row = get_db().execute(
-        """SELECT MAX(CAST(ma_mau AS INTEGER)) AS max_num FROM colors
+    ty. LƯU Ý: khác thiết kế cũ (luôn tăng dần, không tái dùng số đã xóa) —
+    hàm này SẼ tái sử dụng số của màu đã xóa trước đó, theo yêu cầu mới."""
+    rows = get_db().execute(
+        """SELECT CAST(ma_mau AS INTEGER) AS n FROM colors
            WHERE ma_mau ~ '^[0-9]+$'"""
-    ).fetchone()
-    max_num = row["max_num"] if row and row["max_num"] is not None else 0
-    return str(max_num + 1)
+    ).fetchall()
+    used = {r["n"] for r in rows}
+    n = 1
+    while n in used:
+        n += 1
+    return str(n)
 
 
 def next_ma_mau_khach_hang(username):

@@ -5,7 +5,7 @@ from werkzeug.security import check_password_hash
 from models import user as user_model
 from models import permission as permission_model
 from models import color_version
-from services.permissions import effective_permissions, ROLE_LABELS
+from services.permissions import effective_permissions, ROLE_LABELS, ROLE_ADMIN
 
 bp = Blueprint("auth", __name__)
 
@@ -70,6 +70,7 @@ def inject_template_helpers():
     return {
         "can": lambda p: p in g.get("current_permissions", set()),
         "role_label": lambda r: ROLE_LABELS.get(r, r),
+        "is_admin": lambda: bool(g.get("current_user") and g.current_user["role"] == ROLE_ADMIN),
     }
 
 

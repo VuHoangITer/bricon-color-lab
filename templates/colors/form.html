@@ -7,9 +7,15 @@
 {% endif %}
 <form method="post" class="color-form" id="colorForm" enctype="multipart/form-data">
   <div class="form-grid">
+    {% if is_admin() %}
     <label>Mã màu * <span class="muted small">(gợi ý — có thể sửa)</span>
       <input type="text" name="ma_mau" required value="{{ suggested_ma_mau }}" placeholder="vd: BR-000138">
     </label>
+    {% else %}
+    <label>Mã màu <span class="muted small">(tự động, không thể sửa)</span>
+      <input type="text" name="ma_mau" value="{{ suggested_ma_mau }}" readonly>
+    </label>
+    {% endif %}
     <label>Tên màu
       <input type="text" name="ten_mau" placeholder="vd: Xám tro nhạt">
     </label>

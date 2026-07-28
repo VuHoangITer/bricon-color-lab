@@ -8,9 +8,15 @@
 
 <form method="post" class="color-form" id="colorForm">
   <div class="form-grid">
+    {% if is_admin() %}
     <label>Mã màu *
       <input type="text" name="ma_mau" required value="{{ color['ma_mau'] }}">
     </label>
+    {% else %}
+    <label>Mã màu <span class="muted small">(không thể sửa)</span>
+      <input type="text" name="ma_mau" value="{{ color['ma_mau'] }}" readonly>
+    </label>
+    {% endif %}
     <label>Tên màu
       <input type="text" name="ten_mau" value="{{ color['ten_mau'] or '' }}">
     </label>

@@ -123,6 +123,9 @@ input[type=text], input[type=number], input[type=password], select, input[type=f
   display: block; width: 100%; min-height: 42px; margin-top: 6px; padding: 9px 11px; border: 1px solid #d0d5dd; border-radius: 9px; background: #fff; color: var(--text); font-size: 14px; font-weight: 400; outline: none; transition: border-color .15s, box-shadow .15s;
 }
 input:focus, select:focus { border-color: var(--primary-dark); box-shadow: 0 0 0 3px rgba(214,168,20,.18); }
+input[readonly] { background: #f2f4f7; color: #667085; cursor: not-allowed; }
+input[readonly]:focus { border-color: #d0d5dd; box-shadow: none; }
+input[readonly]:hover { cursor: not-allowed; }
 .form-grid, .pigment-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
 .color-form { padding: 16px; }
 .total-bar { position: sticky; bottom: 10px; z-index: 5; margin: 16px 0; padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 4px 14px rgba(16,24,40,.12); }

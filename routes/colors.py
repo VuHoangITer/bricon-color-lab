@@ -12,6 +12,7 @@ from models import image as image_model
 from models.activity_log import log
 from routes.auth import login_required, permission_required
 from services import qr_service
+from services.permissions import ROLE_ADMIN
 
 bp = Blueprint("colors", __name__)
 
@@ -34,6 +35,14 @@ def _parse_ratios(form, pigments):
             raise ValueError(f"Tỷ lệ của '{p['name']}' phải trong khoảng 0–100%.")
         ratios[p["id"]] = val / 100.0
     return ratios
+
+
+def _is_admin():
+    """True nếu người thao tác là role admin — CHỈ admin được tự tay gõ/sửa
+    mã màu. Các role khác luôn bị khóa: khi tạo màu thì dùng đúng mã được
+    gợi ý tự động, khi sửa màu thì giữ nguyên mã cũ, bất kể form gửi gì lên."""
+    user = g.get("current_user")
+    return bool(user and user["role"] == ROLE_ADMIN)
 
 
 def _can_self_approve():
@@ -160,8 +169,12 @@ def new():
                 raise ValueError(f"Chỉ nhận ảnh: {', '.join(sorted(config.ALLOWED_IMAGE_EXT))}")
 
             auto_approve = _can_self_approve()
+            # Chỉ admin được gõ tay mã màu — các role khác luôn bị khóa,
+            # LUÔN lấy lại mã gợi ý tự động ngay lúc lưu (không tin giá trị
+            # form gửi lên, tránh mã cũ/bị sửa tay qua devtools).
+            ma_mau = request.form.get("ma_mau", "").strip() if _is_admin() else _suggested_ma_mau()
             color_id = color_model.create(
-                request.form.get("ma_mau", ""),
+                ma_mau,
                 request.form.get("ten_mau", ""),
                 request.form.get("ghi_chu", ""),
                 session["user_id"],
@@ -184,7 +197,7 @@ def new():
             if auto_approve:
                 _ensure_qr(color_id)
             log(session["user_id"], "TẠO MÀU", "color", color_id,
-                {"ma_mau": request.form.get("ma_mau"), "phien_ban": 1,
+                {"ma_mau": ma_mau, "phien_ban": 1,
                  "trang_thai_duyet": "DA_DUYET" if auto_approve else "CHO_DUYET"})
             if auto_approve:
                 flash("Đã tạo màu mới (tự động duyệt) và sinh mã QR.", "success")
@@ -252,9 +265,12 @@ def new_version(color_id):
                 old_ratios = {r["name"]: r["ty_le"] for r in color_version.get_ratio_rows(active["id"])}
             new_ratios_named = {p["name"]: ratios[p["id"]] for p in pigments}
 
+            # Chỉ admin được sửa mã màu ở đây — role khác gửi gì lên cũng
+            # bị bỏ qua, giữ nguyên mã màu hiện tại của màu này.
+            ma_mau = request.form.get("ma_mau", c["ma_mau"]).strip() if _is_admin() else c["ma_mau"]
             color_model.update_info(
                 color_id,
-                request.form.get("ma_mau", c["ma_mau"]),
+                ma_mau,
                 request.form.get("ten_mau", c["ten_mau"] or ""),
                 request.form.get("ghi_chu", c["ghi_chu"] or ""),
                 hex_color=_clean_hex(request.form.get("hex_color")),
@@ -270,7 +286,7 @@ def new_version(color_id):
             if auto_approve:
                 _ensure_qr(color_id)
             log(session["user_id"], "TẠO PHIÊN BẢN", "color", color_id,
-                {"ma_mau": c["ma_mau"], "phien_ban": v["version_number"],
+                {"ma_mau": ma_mau, "phien_ban": v["version_number"],
                  "cu": old_ratios, "moi": new_ratios_named,
                  "trang_thai_duyet": "DA_DUYET" if auto_approve else "CHO_DUYET"})
             if auto_approve:
@@ -315,9 +331,12 @@ def edit_version(color_id, version_id):
             ratios = _parse_ratios(request.form, pigments)
             old_ratios_named = {p["name"]: (prefill.get(p["id"], 0) or 0) / 100.0 for p in pigments}
             new_ratios_named = {p["name"]: ratios[p["id"]] for p in pigments}
+            # Chỉ admin được sửa mã màu ở đây — role khác gửi gì lên cũng
+            # bị bỏ qua, giữ nguyên mã màu hiện tại của màu này.
+            ma_mau = request.form.get("ma_mau", c["ma_mau"]).strip() if _is_admin() else c["ma_mau"]
             color_model.update_info(
                 color_id,
-                request.form.get("ma_mau", c["ma_mau"]),
+                ma_mau,
                 request.form.get("ten_mau", c["ten_mau"] or ""),
                 request.form.get("ghi_chu", c["ghi_chu"] or ""),
                 hex_color=_clean_hex(request.form.get("hex_color")),
@@ -328,7 +347,7 @@ def edit_version(color_id, version_id):
                 resubmit=is_resubmit,
             )
             log(session["user_id"], "SỬA PHIÊN BẢN", "color", color_id,
-                {"ma_mau": request.form.get("ma_mau", c["ma_mau"]),
+                {"ma_mau": ma_mau,
                  "phien_ban": v["version_number"], "gui_lai": is_resubmit,
                  "cu": old_ratios_named, "moi": new_ratios_named})
             if is_resubmit:
