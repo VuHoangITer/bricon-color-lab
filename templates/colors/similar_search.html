@@ -28,7 +28,7 @@
     <div class="card-body">
       <div class="card-title">
         <b>{{ r.color['ma_mau'] }}</b>
-        <span class="badge badge-{{ 'ok' if r.similarity_pct >= 90 else ('warn' if r.similarity_pct < 60 else 'muted') }}">{{ r.similarity_pct }}% giống</span>
+        <span class="badge badge-{{ 'ok' if r.similarity_pct >= 90 else ('warn' if r.similarity_pct < 60 else 'muted') }}">Khớp {{ r.similarity_pct }}%</span>
       </div>
       <div class="card-sub">{{ r.color['ten_mau'] or 'Chưa đặt tên' }} · {{ r.color['hex_color'] }}</div>
     </div>
