@@ -1,9 +1,14 @@
 import re as _re
 import time
+from io import BytesIO
+from datetime import datetime
 from pathlib import Path
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, session, g, abort)
+                   flash, session, g, abort, send_file)
 from werkzeug.utils import secure_filename
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 import config
 from models import color as color_model
 from models import color_version
@@ -116,6 +121,77 @@ def index():
     return render_template("colors/list.html",
                            items=color_model.list_all(),
                            pigments=pigment_model.all_ordered())
+
+
+def _is_dark_hex(hex6):
+    """True nếu màu tối -> dùng chữ trắng cho dễ đọc khi tô nền ô Excel
+    đúng theo màu HEX thật."""
+    r, g_, b = int(hex6[0:2], 16), int(hex6[2:4], 16), int(hex6[4:6], 16)
+    return (0.299 * r + 0.587 * g_ + 0.114 * b) < 140
+
+
+@bp.route("/colors/export")
+@login_required
+def export_excel():
+    """Xuất nhanh mã màu + mã HEX + tỷ lệ pigment cấu tạo (theo phiên bản
+    đang dùng) ra file Excel — đúng danh sách màu đang hiện ở Thư viện màu.
+    Ô mã HEX được tô luôn theo đúng màu thật cho dễ nhìn/đối chiếu."""
+    items = color_model.list_all()
+    pigments = pigment_model.all_ordered()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Mã màu"
+
+    headers = ["Mã màu", "Tên màu", "Mã HEX"] + [p["name"] for p in pigments]
+    ws.append(headers)
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="4472C4")
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for i, it in enumerate(items, start=1):
+        c = it["color"]
+        hex_color = (c["hex_color"] or "").strip()
+        row_idx = i + 1
+        ratio_map = {}
+        if c["active_version_id"]:
+            ratio_map = {r["pigment_id"]: r["ty_le"] for r in color_version.get_ratio_rows(c["active_version_id"])}
+
+        ws.append([c["ma_mau"], c["ten_mau"] or "", hex_color]
+                  + [ratio_map.get(p["id"]) or None for p in pigments])
+
+        fill_hex = hex_color.lstrip("#").upper()
+        if len(fill_hex) == 6:
+            hex_cell = ws.cell(row=row_idx, column=3)
+            hex_cell.fill = PatternFill("solid", fgColor=fill_hex)
+            hex_cell.font = Font(color="FFFFFF" if _is_dark_hex(fill_hex) else "000000", bold=True)
+            hex_cell.alignment = Alignment(horizontal="center")
+
+        for p_idx in range(len(pigments)):
+            cell = ws.cell(row=row_idx, column=4 + p_idx)
+            cell.number_format = "0.00%"
+            cell.alignment = Alignment(horizontal="center")
+
+    widths = [16, 28, 12] + [14] * len(pigments)
+    for col_idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+    ws.freeze_panes = "D2"
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{len(items) + 1}"
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"ma_mau_bricon_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @bp.route("/colors/tim-mau-giong")
