@@ -12,6 +12,14 @@ from reportlab.lib.styles import ParagraphStyle
 import config
 
 _FONT_CANDIDATES = [
+    # Font đi KÈM THEO project (static/fonts/) — ưu tiên đầu tiên, luôn có
+    # mặt sau khi deploy bất kể server đã cài font hệ thống hay chưa. Đây
+    # là nguyên nhân phổ biến khiến "Xuất PDF" báo lỗi 500 trên server: các
+    # đường dẫn font hệ thống bên dưới không tồn tại -> rơi về Helvetica
+    # (font lõi của PDF) -> Helvetica không encode được ký tự có dấu tiếng
+    # Việt (Ỷ, Ệ, Ơ...) -> reportlab ném lỗi ngay lúc build PDF.
+    (str(config.BASE_DIR / "static" / "fonts" / "DejaVuSans.ttf"),
+     str(config.BASE_DIR / "static" / "fonts" / "DejaVuSans-Bold.ttf")),
     ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
     ("C:/Windows/Fonts/times.ttf", "C:/Windows/Fonts/timesbd.ttf"),
     ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -36,6 +44,16 @@ for regular, bold in _FONT_CANDIDATES:
             break
         except Exception:
             continue
+
+if FONT == "Helvetica":
+    # Không tìm thấy font nào hỗ trợ tiếng Việt -> Helvetica sẽ CRASH khi
+    # gặp ký tự có dấu. Ghi log rõ ràng thay vì để lỗi 500 mù mờ không rõ
+    # nguyên nhân như trước.
+    import logging
+    logging.getLogger(__name__).warning(
+        "pdf_service: không tìm thấy font TTF hỗ trợ tiếng Việt nào — "
+        "PDF sẽ lỗi khi gặp ký tự có dấu. Kiểm tra static/fonts/DejaVuSans.ttf "
+        "có tồn tại trong project không.")
 
 
 def _fmt_g(v):
