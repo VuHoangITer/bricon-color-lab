@@ -107,13 +107,21 @@ def _active_ratio_summary(color_row):
 def list_all():
     """Danh sách màu kèm trạng thái phiên bản ĐANG DÙNG — CHỈ hiện màu đang
     có 1 phiên bản active (đã được duyệt). Màu chưa có bản nào được duyệt
-    thì không hiện trong thư viện chung (xem ở trang Chờ duyệt / Của tôi)."""
+    thì không hiện trong thư viện chung (xem ở trang Chờ duyệt / Của tôi).
+    Sắp theo MÃ MÀU (ma_mau) chứ không theo id tạo trong DB — vì next_ma_mau()
+    tái sử dụng số đã xóa nên id tăng dần không còn khớp thứ tự số của mã màu
+    (vd: màu '31' có thể được tạo SAU màu '34' nếu '31' là số trống được tái
+    dùng). Mã số thuần (21, 22...) xếp trước theo đúng thứ tự số; mã không
+    phải số thuần (KH-user-01, BR-000138...) xếp sau, theo alphabet."""
     db = get_db()
     rows = db.execute(
         """SELECT c.*, cv.id AS active_version_id, cv.version_number AS active_version_number
            FROM colors c
            JOIN color_versions cv ON cv.color_id = c.id AND cv.is_active = 1
-           ORDER BY c.id"""
+           ORDER BY
+               CASE WHEN c.ma_mau ~ '^[0-9]+$' THEN 0 ELSE 1 END,
+               CASE WHEN c.ma_mau ~ '^[0-9]+$' THEN CAST(c.ma_mau AS INTEGER) END,
+               c.ma_mau"""
     ).fetchall()
     result = []
     for c in rows:
