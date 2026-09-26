@@ -35,6 +35,15 @@
     </div>
   </label>
 
+  <label>Lab đo từ máy đo màu <span class="muted small">(tùy chọn — giữ nguyên nếu không đo lại)</span>
+    <div class="form-grid" style="margin-top:4px">
+      <input type="number" step="any" name="lab_l" placeholder="L*" value="{{ color['lab_l'] if color['lab_l'] is not none else '' }}">
+      <input type="number" step="any" name="lab_a" placeholder="a*" value="{{ color['lab_a'] if color['lab_a'] is not none else '' }}">
+      <input type="number" step="any" name="lab_b" placeholder="b*" value="{{ color['lab_b'] if color['lab_b'] is not none else '' }}">
+    </div>
+    <span class="muted small">Dùng để "Tìm màu giống" chính xác hơn HEX. Để trống cả 3 nếu chưa đo bằng máy.</span>
+  </label>
+
   <label>Ghi chú cho phiên bản này <span class="muted small">(tùy chọn — vd: "Giảm tỷ lệ đen theo phản hồi khách")</span>
     <input type="text" name="version_ghi_chu" placeholder="Lý do/điểm thay đổi của phiên bản này">
   </label>

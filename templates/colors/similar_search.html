@@ -10,16 +10,26 @@
     <div class="hex-row" style="max-width:500px">
       <input type="color" id="hexPicker" value="{{ hex_query if hex_query else '#cccccc' }}">
       <input type="text" name="hex" id="hexText" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$"
-             placeholder="#RRGGBB" value="{{ hex_query }}" required>
-      <span class="muted small">Chọn màu hoặc gõ mã HEX rồi bấm Tìm — hệ thống so với mã HEX các màu đang có trong thư viện.</span>
+             placeholder="#RRGGBB" value="{{ hex_query }}">
+      <span class="muted small">Chọn màu hoặc gõ mã HEX.</span>
     </div>
+    <label style="margin-top:10px;display:block">Hoặc nhập Lab đo từ máy đo màu <span class="muted small">(chính xác hơn HEX — ưu tiên dùng nếu có)</span>
+      <div class="form-grid" style="margin-top:4px;max-width:400px">
+        <input type="number" step="any" name="lab_l" placeholder="L*" value="{{ raw_l }}">
+        <input type="number" step="any" name="lab_a" placeholder="a*" value="{{ raw_a }}">
+        <input type="number" step="any" name="lab_b" placeholder="b*" value="{{ raw_b }}">
+      </div>
+    </label>
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Tìm</button>
     </div>
   </form>
 </section>
 
-{% if hex_query %}
+{% if lab_query %}
+<p class="muted small" style="margin:10px 0 -4px">Đang so theo Lab đo máy bạn nhập (chính xác hơn HEX).</p>
+{% endif %}
+{% if hex_query or lab_query %}
 <h2 style="margin:18px 0 12px">Kết quả — {{ results|length }} màu gần giống nhất</h2>
 <div class="color-grid">
   {% for r in results %}
@@ -34,7 +44,7 @@
     </div>
   </a>
   {% else %}
-  <p class="muted">Chưa có màu nào trong thư viện khai báo mã HEX để so sánh.</p>
+  <p class="muted">Chưa có màu nào trong thư viện khai báo HEX/Lab để so sánh.</p>
   {% endfor %}
 </div>
 {% endif %}

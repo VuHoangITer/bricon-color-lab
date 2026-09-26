@@ -19,6 +19,7 @@
     </form>
     {% endif %}
   </div>
+
 </div>
 {% if can('tao_phieu_can') and not ready_for_weighing %}
 <p class="muted small" style="margin-top:-10px;margin-bottom:14px">Chưa thể tạo phiếu cân — cần có 1 phiên bản ĐÃ DUYỆT với tổng pigment ĐẠT 100%.</p>
@@ -60,10 +61,56 @@
   <section class="card">
     {% if color['hex_color'] %}
     <div class="color-swatch-big" style="background: {{ color['hex_color'] }}"></div>
-    <p class="muted small mono" style="margin-top:10px">{{ color['hex_color'] }}</p>
+    <p class="muted small mono" style="margin-top:10px">{{ color['hex_color'] }}
+      {% if can('duyet_mau') %}
+      <button type="button" class="btn btn-sm" title="Sửa HEX/Lab"
+              onclick="document.getElementById('hexEditRow').classList.toggle('hidden-form')">✎</button>
+      {% endif %}
+    </p>
     {% else %}
     <div class="color-swatch-big color-swatch-empty"></div>
-    <p class="muted small" style="margin-top:10px">Chưa khai báo mã HEX hiển thị.</p>
+    <p class="muted small" style="margin-top:10px">Chưa khai báo mã HEX hiển thị.
+      {% if can('duyet_mau') %}
+      <button type="button" class="btn btn-sm" title="Thêm HEX/Lab"
+              onclick="document.getElementById('hexEditRow').classList.toggle('hidden-form')">✎ Thêm</button>
+      {% endif %}
+    </p>
+    {% endif %}
+    {% if color['lab_l'] is not none %}
+    <p style="margin-top:8px;text-align:center">
+      <span class="lab-badge">L={{ color['lab_l'] }} a={{ color['lab_a'] }} b={{ color['lab_b'] }}</span>
+      {% if can('duyet_mau') %}
+      <button type="button" class="btn btn-sm" title="Sửa Lab"
+              onclick="document.getElementById('hexEditRow').classList.toggle('hidden-form')">✎</button>
+      {% endif %}
+    </p>
+    {% endif %}
+    {% if can('duyet_mau') %}
+    <form method="post" action="{{ url_for('colors.edit_hex', color_id=color['id']) }}"
+          id="hexEditRow" class="inline-form hidden-form" style="margin-top:8px;flex-wrap:wrap">
+      <input type="color" id="hexEditPicker" value="{{ color['hex_color'] or '#cccccc' }}">
+      <input type="text" name="hex_color" id="hexEditText" maxlength="7"
+             pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB"
+             value="{{ color['hex_color'] or '' }}" required style="width:110px">
+      <input type="number" step="any" name="lab_l" placeholder="L*" style="width:70px"
+             value="{{ color['lab_l'] if color['lab_l'] is not none else '' }}">
+      <input type="number" step="any" name="lab_a" placeholder="a*" style="width:70px"
+             value="{{ color['lab_a'] if color['lab_a'] is not none else '' }}">
+      <input type="number" step="any" name="lab_b" placeholder="b*" style="width:70px"
+             value="{{ color['lab_b'] if color['lab_b'] is not none else '' }}">
+      <button type="submit" class="btn btn-sm btn-primary">Lưu</button>
+    </form>
+    <script>
+    (function () {
+      const picker = document.getElementById('hexEditPicker');
+      const text = document.getElementById('hexEditText');
+      if (!picker || !text) return;
+      picker.addEventListener('input', () => { text.value = picker.value.toUpperCase(); });
+      text.addEventListener('input', () => {
+        if (/^#[0-9A-Fa-f]{6}$/.test(text.value.trim())) picker.value = text.value.trim();
+      });
+    })();
+    </script>
     {% endif %}
   </section>
 </div>
@@ -73,32 +120,114 @@
   {% if can('duyet_mau') or (color['created_by'] == g.current_user['id']) or can('upload_anh') %}
   <form method="post" enctype="multipart/form-data" class="inline-form"
         action="{{ url_for('colors.upload_image', color_id=color['id']) }}">
-    <input type="file" name="image" accept="image/*" required>
+    <input type="file" name="image" required id="uploadImageInput" multiple>
     <select name="loai_anh">
       {% for t in image_types %}<option>{{ t }}</option>{% endfor %}
     </select>
     <input type="text" name="ghi_chu" placeholder="Ghi chú (tùy chọn)">
-    <button type="submit" class="btn">Tải ảnh lên</button>
+    <button type="submit" class="btn">Tải file lên</button>
   </form>
+  <p class="muted small" style="margin-top:6px">Có thể chọn/kéo-thả nhiều file cùng lúc (giữ Ctrl hoặc Shift khi chọn) — tất cả sẽ gắn cùng "loại ảnh"/ghi chú đã chọn ở trên. Nhận mọi loại file (ảnh, video, docx, pdf, xlsx...).</p>
+  <div id="uploadPreviewWrap" style="display:none;margin:0 0 8px">
+    <span class="muted small">Xem trước — kiểm tra đúng file rồi mới bấm "Tải file lên":</span>
+    <div id="uploadPreviewList" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px"></div>
+    <button type="button" id="uploadPreviewRemoveBtn" class="btn btn-sm btn-danger" style="margin-top:8px">Bỏ chọn tất cả</button>
+  </div>
+  <script>
+  (function () {
+    const input = document.getElementById('uploadImageInput');
+    const wrap = document.getElementById('uploadPreviewWrap');
+    const list = document.getElementById('uploadPreviewList');
+    const removeBtn = document.getElementById('uploadPreviewRemoveBtn');
+    if (!input || !wrap || !list) return;
+    let selected = []; // gộp dồn qua nhiều lần bấm "Choose File", không mất lần trước
+    let urls = [];
+    function clearUrls() { urls.forEach(u => URL.revokeObjectURL(u)); urls = []; }
+    function sameFile(a, b) { return a.name === b.name && a.size === b.size && a.lastModified === b.lastModified; }
+    function syncInput() {
+      const dt = new DataTransfer();
+      selected.forEach(f => dt.items.add(f));
+      input.files = dt.files;
+    }
+    function render() {
+      clearUrls();
+      list.innerHTML = '';
+      if (!selected.length) { wrap.style.display = 'none'; return; }
+      selected.forEach((f, idx) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'text-align:center;width:90px;position:relative';
+        if (f.type && f.type.startsWith('image/')) {
+          const url = URL.createObjectURL(f);
+          urls.push(url);
+          const img = document.createElement('img');
+          img.src = url;
+          img.style.cssText = 'width:90px;height:90px;object-fit:cover;border:1px solid var(--border);border-radius:9px;display:block';
+          item.appendChild(img);
+        } else {
+          const icon = document.createElement('div');
+          icon.textContent = '📎';
+          icon.style.fontSize = '30px';
+          item.appendChild(icon);
+        }
+        const name = document.createElement('div');
+        name.className = 'muted small';
+        name.style.wordBreak = 'break-all';
+        name.textContent = f.name;
+        item.appendChild(name);
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.textContent = '✕';
+        rm.title = 'Bỏ file này';
+        rm.style.cssText = 'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px;line-height:1;padding:0';
+        rm.addEventListener('click', () => { selected.splice(idx, 1); syncInput(); render(); });
+        item.appendChild(rm);
+        list.appendChild(item);
+      });
+      wrap.style.display = 'block';
+    }
+    input.addEventListener('change', () => {
+      Array.from(input.files || []).forEach(f => {
+        if (!selected.some(s => sameFile(s, f))) selected.push(f);
+      });
+      syncInput();
+      render();
+    });
+    removeBtn.addEventListener('click', () => {
+      selected = [];
+      syncInput();
+      render();
+    });
+  })();
+  </script>
   {% endif %}
   <div class="gallery">
     {% for img in images %}
+    {% set kind = img['file_path']|file_kind %}
     <figure>
+      {% if kind == 'image' %}
       <a href="{{ url_for('static', filename=img['file_path']) }}" class="js-lightbox" data-alt="{{ img['loai_anh'] }}">
         <img src="{{ url_for('static', filename=img['file_path']) }}" alt="{{ img['loai_anh'] }}">
       </a>
+      {% elif kind == 'video' %}
+      <video controls src="{{ url_for('static', filename=img['file_path']) }}"></video>
+      {% else %}
+      <a class="file-card" href="{{ url_for('static', filename=img['file_path']) }}" target="_blank" rel="noopener">
+        <span class="file-icon">{{ img['file_path']|file_icon }}</span>
+        <span>{{ img['file_path']|file_name }}</span>
+      </a>
+      {% endif %}
       <figcaption>{{ img['loai_anh'] }}{% if img['ghi_chu'] %} — {{ img['ghi_chu'] }}{% endif %}
         <span class="muted small">{{ img['uploaded_at'] }} · {{ img['username'] or '' }}</span>
       </figcaption>
       {% if is_admin() %}
       <form method="post" action="{{ url_for('colors.delete_image', color_id=color['id'], image_id=img['id']) }}"
-            onsubmit="return confirm('Xóa ảnh này?')" style="margin-top:6px">
-        <button type="submit" class="btn btn-sm btn-danger" style="width:100%">Xóa ảnh</button>
+            onsubmit="return confirm('Xóa file này?')" style="margin-top:6px">
+        <button type="submit" class="btn btn-sm btn-danger" style="width:100%">Xóa</button>
       </form>
       {% endif %}
     </figure>
     {% else %}
-    <p class="muted">Chưa có ảnh nào.</p>
+    <p class="muted">Chưa có file nào.</p>
     {% endfor %}
   </div>
 </section>

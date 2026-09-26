@@ -58,6 +58,14 @@ class Color(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
     qr_code_path = db.Column(db.Text)
     hex_color = db.Column(db.Text)
+    # Lab đo THẬT từ máy đo màu (D65/10° hay theo máy đang dùng) — ưu tiên
+    # hơn hex_color khi so màu (xem models/color.py::get_lab), vì HEX 8-bit
+    # làm mất chi tiết so với số Lab máy đo ra, nhất là vùng màu tối. Cả 3
+    # cột cùng NULL nếu màu chưa được đo bằng máy (khi đó so màu tự suy Lab
+    # từ hex_color như cách cũ).
+    lab_l = db.Column(REAL)
+    lab_a = db.Column(REAL)
+    lab_b = db.Column(REAL)
     trang_thai_duyet = db.Column(db.Text, nullable=False, server_default="CHO_DUYET")
     duyet_boi = db.Column(db.Integer, db.ForeignKey("users.id"))
     duyet_luc = db.Column(db.DateTime)

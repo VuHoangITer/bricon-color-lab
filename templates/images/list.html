@@ -21,10 +21,20 @@
 
 <div class="gallery">
   {% for f in files %}
+  {% set kind = f['name']|file_kind %}
   <figure>
+    {% if kind == 'image' %}
     <a href="{{ url_for('static', filename='uploads/images/' + f['name']) }}" class="js-lightbox" data-alt="{{ f['name'] }}">
       <img src="{{ url_for('static', filename='uploads/images/' + f['name']) }}" alt="{{ f['name'] }}">
     </a>
+    {% elif kind == 'video' %}
+    <video controls src="{{ url_for('static', filename='uploads/images/' + f['name']) }}"></video>
+    {% else %}
+    <a class="file-card" href="{{ url_for('static', filename='uploads/images/' + f['name']) }}" target="_blank" rel="noopener">
+      <span class="file-icon">{{ f['name']|file_icon }}</span>
+      <span>{{ f['name'] }}</span>
+    </a>
+    {% endif %}
     <figcaption>
       {% if f['ma_mau'] %}
       <a href="{{ url_for('colors.detail', color_id=f['color_id']) }}"><b>Màu {{ f['ma_mau'] }}</b></a>

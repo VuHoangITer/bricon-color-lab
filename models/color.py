@@ -12,28 +12,36 @@ def status_of(total, has_any):
     return "ĐẠT" if abs(total - 1.0) < TOLERANCE else "SAI TỔNG"
 
 
-def create(ma_mau, ten_mau, ghi_chu, user_id, hex_color=None):
-    """Tạo MÀU (chỉ thông tin chung: mã, tên, ghi chú, HEX).
+def create(ma_mau, ten_mau, ghi_chu, user_id, hex_color=None, lab=None):
+    """Tạo MÀU (chỉ thông tin chung: mã, tên, ghi chú, HEX, Lab đo máy).
+    lab: tuple (L, a, b) đo được từ máy đo màu thật, hoặc None nếu chưa đo
+    (khi đó so màu sẽ tự suy Lab từ HEX — xem get_lab()).
     Công thức/tỷ lệ pigment là chuyện của color_version.create_version(),
     gọi riêng ngay sau khi có color_id."""
     db = get_db()
+    l, a, b = lab if lab else (None, None, None)
     cur = db.execute(
-        "INSERT INTO colors (ma_mau, ten_mau, ghi_chu, created_by, hex_color) VALUES (%s,%s,%s,%s,%s) RETURNING id",
-        (ma_mau.strip(), ten_mau.strip(), (ghi_chu or "").strip(), user_id, hex_color),
+        """INSERT INTO colors (ma_mau, ten_mau, ghi_chu, created_by, hex_color, lab_l, lab_a, lab_b)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+        (ma_mau.strip(), ten_mau.strip(), (ghi_chu or "").strip(), user_id, hex_color, l, a, b),
     )
     color_id = cur.fetchone()["id"]
     db.commit()
     return color_id
 
 
-def update_info(color_id, ma_mau, ten_mau, ghi_chu, hex_color=None):
-    """Sửa thông tin chung của màu (mã/tên/ghi chú/HEX) — KHÔNG đụng công
-    thức/phiên bản. Sửa công thức phải qua color_version.create_version()."""
+def update_info(color_id, ma_mau, ten_mau, ghi_chu, hex_color=None, lab=None):
+    """Sửa thông tin chung của màu (mã/tên/ghi chú/HEX/Lab đo máy) — KHÔNG
+    đụng công thức/phiên bản. Sửa công thức phải qua color_version.create_version().
+    lab: tuple (L, a, b) hoặc None — LUÔN ghi đè cả 3 cột lab_l/lab_a/lab_b
+    (giống hex_color), nên các form gọi hàm này phải tự gửi lại giá trị Lab
+    hiện có nếu không muốn mất số đã đo (xem prefill ở template)."""
     db = get_db()
+    l, a, b = lab if lab else (None, None, None)
     db.execute(
         """UPDATE colors SET ma_mau=%s, ten_mau=%s, ghi_chu=%s, hex_color=%s,
-           updated_at=CURRENT_TIMESTAMP WHERE id=%s""",
-        (ma_mau.strip(), ten_mau.strip(), (ghi_chu or "").strip(), hex_color, color_id),
+           lab_l=%s, lab_a=%s, lab_b=%s, updated_at=CURRENT_TIMESTAMP WHERE id=%s""",
+        (ma_mau.strip(), ten_mau.strip(), (ghi_chu or "").strip(), hex_color, l, a, b, color_id),
     )
     db.commit()
 
@@ -257,30 +265,48 @@ def _similarity_pct(delta_e):
     return max(0, min(100, round(pct)))
 
 
-def find_similar(hex_color, exclude_id=None, limit=8):
-    """Tìm các màu có mã HEX gần giống nhất — chỉ so với màu đang có phiên
-    bản active (tức đang hiện trong thư viện) và đã khai báo hex_color.
+def get_lab(color_row):
+    """Lab dùng để SO MÀU cho 1 màu: ưu tiên Lab đo THẬT từ máy đo màu
+    (cột lab_l/lab_a/lab_b) nếu đã khai báo đủ cả 3 số — chính xác hơn vì
+    không phải suy ngược qua HEX (8-bit, mất chi tiết nhất là ở vùng tối).
+    Nếu chưa đo bằng máy thì mới suy Lab từ hex_color như trước.
+    Trả về tuple (L, a, b) hoặc None nếu không có dữ liệu nào để so."""
+    l, a, b = color_row.get("lab_l"), color_row.get("lab_a"), color_row.get("lab_b")
+    if l is not None and a is not None and b is not None:
+        return (l, a, b)
+    return _hex_to_lab(color_row.get("hex_color"))
+
+
+def find_similar(hex_color=None, lab=None, exclude_id=None, limit=8):
+    """Tìm các màu gần giống nhất trong thư viện — chỉ so với màu đang có
+    phiên bản active (tức đang hiện trong thư viện). Với CẢ màu mục tiêu
+    (tham số lab/hex_color) và từng màu trong thư viện, ưu tiên dùng Lab đo
+    thật (get_lab()) nếu có, chỉ suy từ HEX khi màu đó chưa được đo bằng
+    máy đo màu — xem get_lab().
     So màu bằng CIEDE2000 trên không gian Lab (chuẩn ngành, theo cảm nhận
     mắt người), không phải khoảng cách thô trên RGB.
+    lab: tuple (L, a, b) đo trực tiếp từ máy đo — ưu tiên hơn hex_color nếu
+    truyền cả 2. hex_color: dùng khi chưa có số đo máy, chỉ có mã HEX.
     Trả về list [{"color":..., "distance":..., "similarity_pct":...}],
     sắp xếp gần giống nhất trước (distance ở đây là ΔE00, càng nhỏ càng giống)."""
-    target_lab = _hex_to_lab(hex_color)
+    target_lab = tuple(lab) if lab else _hex_to_lab(hex_color)
     if not target_lab:
         return []
     db = get_db()
     rows = db.execute(
         """SELECT c.* FROM colors c
            JOIN color_versions cv ON cv.color_id = c.id AND cv.is_active = 1
-           WHERE c.hex_color IS NOT NULL AND c.hex_color != ''"""
+           WHERE (c.hex_color IS NOT NULL AND c.hex_color != '')
+              OR (c.lab_l IS NOT NULL AND c.lab_a IS NOT NULL AND c.lab_b IS NOT NULL)"""
     ).fetchall()
     results = []
     for c in rows:
         if exclude_id and c["id"] == exclude_id:
             continue
-        lab = _hex_to_lab(c["hex_color"])
-        if not lab:
+        candidate_lab = get_lab(c)
+        if not candidate_lab:
             continue
-        delta_e = _delta_e2000(target_lab, lab)
+        delta_e = _delta_e2000(target_lab, candidate_lab)
         results.append({"color": c, "distance": delta_e, "similarity_pct": _similarity_pct(delta_e)})
     results.sort(key=lambda r: r["distance"])
     return results[:limit]

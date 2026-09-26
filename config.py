@@ -27,14 +27,31 @@ UPLOAD_ROOT = BASE_DIR / "static" / "uploads"
 QR_FOLDER = UPLOAD_ROOT / "qr"
 IMAGE_FOLDER = UPLOAD_ROOT / "images"
 PDF_FOLDER = UPLOAD_ROOT / "pdf"
-ALLOWED_IMAGE_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
-MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
 
+# Đuôi file dùng để chọn CÁCH HIỂN THỊ trong thư viện (ảnh xem trực tiếp,
+# video có khung phát, còn lại hiện dạng thẻ file + link mở/tải xuống) —
+# KHÔNG dùng để chặn tải lên.
+IMAGE_EXT = {"png", "jpg", "jpeg", "gif", "webp", "bmp"}
+VIDEO_EXT = {"mp4", "mov", "webm", "avi", "mkv", "m4v"}
+
+# Mục "Hình ảnh" cho tải lên MỌI loại file (ảnh/video/docx/pdf/xlsx...),
+# CHỈ chặn nhóm đuôi mà trình duyệt có thể CHẠY ngay khi mở trực tiếp link
+# (HTML/SVG có thể chứa script, hoặc file thực thi) — tránh rủi ro chạy mã
+# trên chính domain của app. Cần mở thêm/bớt đuôi thì sửa trực tiếp set này.
+BLOCKED_UPLOAD_EXT = {
+    "html", "htm", "svg", "js", "mjs", "php", "phtml",
+    "exe", "sh", "bat", "cmd", "py", "jar", "msi",
+}
+
+# 16MB là quá nhỏ cho video — nâng lên 200MB. Nếu VPS ít dung lượng đĩa,
+# hạ số này lại cho phù hợp.
+MAX_CONTENT_LENGTH = 200 * 1024 * 1024  # 200MB
+
+# Danh sách "Loại ảnh" hiển thị trong dropdown khi tải file lên — cần thêm
+# loại nào thì thêm thẳng vào list này (thứ tự ở đây = thứ tự hiện trong
+# dropdown, mục đầu tiên là mặc định được chọn sẵn).
 IMAGE_TYPES = [
-    "Ảnh màu mục tiêu",
-    "Ảnh pigment đã cân",
-    "Ảnh mẫu khi ướt",
-    "Ảnh mẫu sau 24h",
+    "Ảnh thẻ màu",
     "Ảnh trên gạch",
     "Ảnh máy đo màu",
     "Khác",

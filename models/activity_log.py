@@ -196,6 +196,13 @@ def humanize(action, detail_json):
     if action == "XÓA MÀU":
         return Markup(f"Đã xóa mã màu <b>{e(d.get('ma_mau', ''))}</b>")
 
+    if action == "SỬA MÃ HEX":
+        html = f"Đổi mã HEX <b>{e(d.get('cu') or '—')}</b> → <b>{e(d.get('moi', ''))}</b>"
+        lab_moi = d.get("lab_moi")
+        if lab_moi:
+            html += f" — Lab đo máy: L={e(lab_moi[0])} a={e(lab_moi[1])} b={e(lab_moi[2])}"
+        return Markup(html)
+
     if action == "TẢI ẢNH":
         return Markup(f"Tải ảnh — loại: {e(d.get('loai_anh', 'Khác'))}")
 

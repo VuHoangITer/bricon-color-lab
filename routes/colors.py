@@ -26,6 +26,26 @@ def _clean_hex(value):
     return v if _re.fullmatch(r"#[0-9A-F]{6}", v) else None
 
 
+def _parse_lab(form, prefix=""):
+    """Đọc 3 ô L*/a*/b* (đo từ máy đo màu) từ form — trả về tuple (L,a,b)
+    hoặc None nếu cả 3 ô đều trống (chưa đo bằng máy). Bắt buộc nhập ĐỦ cả
+    3 nếu có nhập, tránh lưu Lab nửa vời gây sai khi so màu."""
+    raw_l = (form.get(f"{prefix}lab_l") or "").strip().replace(",", ".")
+    raw_a = (form.get(f"{prefix}lab_a") or "").strip().replace(",", ".")
+    raw_b = (form.get(f"{prefix}lab_b") or "").strip().replace(",", ".")
+    if not raw_l and not raw_a and not raw_b:
+        return None
+    if not (raw_l and raw_a and raw_b):
+        raise ValueError("Nhập đủ cả 3 số L*/a*/b* từ máy đo màu, hoặc để trống cả 3 nếu chưa đo.")
+    try:
+        l, a, b = float(raw_l), float(raw_a), float(raw_b)
+    except ValueError:
+        raise ValueError("Giá trị L*/a*/b* không hợp lệ — phải là số.")
+    if not (0 <= l <= 100):
+        raise ValueError("L* phải trong khoảng 0–100.")
+    return (l, a, b)
+
+
 def _parse_ratios(form, pigments):
     """Đọc input dạng % (0-100) từ form, trả về dict {pigment_id: phân số 0-1}."""
     ratios = {}
@@ -198,8 +218,25 @@ def export_excel():
 @login_required
 def similar_search():
     hex_query = (request.args.get("hex") or "").strip()
-    results = color_model.find_similar(hex_query, limit=24) if hex_query else []
-    return render_template("colors/similar_search.html", hex_query=hex_query, results=results)
+    raw_l = (request.args.get("lab_l") or "").strip()
+    raw_a = (request.args.get("lab_a") or "").strip()
+    raw_b = (request.args.get("lab_b") or "").strip()
+    lab_query = None
+    if raw_l and raw_a and raw_b:
+        try:
+            lab_query = (float(raw_l.replace(",", ".")), float(raw_a.replace(",", ".")), float(raw_b.replace(",", ".")))
+        except ValueError:
+            flash("Giá trị L*/a*/b* không hợp lệ.", "error")
+
+    results = []
+    if lab_query:
+        # Có Lab đo máy -> dùng trực tiếp, chính xác hơn suy từ HEX.
+        results = color_model.find_similar(lab=lab_query, limit=24)
+    elif hex_query:
+        results = color_model.find_similar(hex_color=hex_query, limit=24)
+    return render_template("colors/similar_search.html", hex_query=hex_query,
+                           raw_l=raw_l, raw_a=raw_a, raw_b=raw_b,
+                           lab_query=lab_query, results=results)
 
 
 @bp.route("/colors/cua-toi")
@@ -221,14 +258,17 @@ def new():
     if request.method == "POST":
         try:
             ratios = _parse_ratios(request.form, pigments)
+            lab = _parse_lab(request.form)
 
-            # Bắt buộc phải có ít nhất 1 ảnh khi tạo màu mới.
-            f = request.files.get("image")
-            if not f or not f.filename:
-                raise ValueError("Cần tải lên ít nhất 1 ảnh khi tạo màu mới.")
-            ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
-            if ext not in config.ALLOWED_IMAGE_EXT:
-                raise ValueError(f"Chỉ nhận ảnh: {', '.join(sorted(config.ALLOWED_IMAGE_EXT))}")
+            # Bắt buộc phải có ít nhất 1 file khi tạo màu mới (chọn nhiều
+            # file 1 lần thì tất cả cùng gắn "loại ảnh"/ghi chú đã chọn).
+            files = [f for f in request.files.getlist("image") if f and f.filename]
+            if not files:
+                raise ValueError("Cần tải lên ít nhất 1 file khi tạo màu mới.")
+            for f in files:
+                ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+                if not ext or ext in config.BLOCKED_UPLOAD_EXT:
+                    raise ValueError(f"File '{f.filename}': đuôi .{ext or '?'} không được phép tải lên.")
 
             auto_approve = _can_self_approve()
             # Chỉ admin được gõ tay mã màu — các role khác luôn bị khóa,
@@ -241,6 +281,7 @@ def new():
                 request.form.get("ghi_chu", ""),
                 session["user_id"],
                 hex_color=_clean_hex(request.form.get("hex_color")),
+                lab=lab,
             )
             color_version.create_version(
                 color_id, ratios, session["user_id"],
@@ -249,12 +290,14 @@ def new():
             )
 
             config.IMAGE_FOLDER.mkdir(parents=True, exist_ok=True)
-            filename = f"color{color_id}_{int(time.time())}_{secure_filename(Path(f.filename).stem) or 'anh'}.{ext}"
-            f.save(config.IMAGE_FOLDER / filename)
-            image_model.create(color_id, f"uploads/images/{filename}",
-                               request.form.get("loai_anh", "Khác"),
-                               session["user_id"],
-                               request.form.get("anh_ghi_chu", "").strip())
+            for i, f in enumerate(files):
+                ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+                filename = f"color{color_id}_{int(time.time()*1000)}_{i}_{secure_filename(Path(f.filename).stem) or 'anh'}.{ext}"
+                f.save(config.IMAGE_FOLDER / filename)
+                image_model.create(color_id, f"uploads/images/{filename}",
+                                   request.form.get("loai_anh", "Khác"),
+                                   session["user_id"],
+                                   request.form.get("anh_ghi_chu", "").strip())
 
             log(session["user_id"], "TẠO MÀU", "color", color_id,
                 {"ma_mau": ma_mau, "phien_ban": 1,
@@ -283,7 +326,8 @@ def detail(color_id):
     active = color_version.get_active(color_id)
     active_detail = color_version.detail(active["id"]) if active else None
     versions = color_version.list_for_color(color_id)
-    similar_colors = color_model.find_similar(c["hex_color"], exclude_id=color_id, limit=6) if c["hex_color"] else []
+    target_lab = color_model.get_lab(c)
+    similar_colors = color_model.find_similar(lab=target_lab, exclude_id=color_id, limit=6) if target_lab else []
     return render_template("colors/detail.html", color=c,
                            active=active, active_detail=active_detail,
                            versions=versions,
@@ -334,6 +378,7 @@ def new_version(color_id):
                 request.form.get("ten_mau", c["ten_mau"] or ""),
                 request.form.get("ghi_chu", c["ghi_chu"] or ""),
                 hex_color=_clean_hex(request.form.get("hex_color")),
+                lab=_parse_lab(request.form),
             )
 
             auto_approve = _can_self_approve()
@@ -398,6 +443,7 @@ def edit_version(color_id, version_id):
                 request.form.get("ten_mau", c["ten_mau"] or ""),
                 request.form.get("ghi_chu", c["ghi_chu"] or ""),
                 hex_color=_clean_hex(request.form.get("hex_color")),
+                lab=_parse_lab(request.form),
             )
             color_version.update_ratios(
                 version_id, ratios,
@@ -537,25 +583,27 @@ def upload_image(color_id):
         return redirect(url_for("colors.index"))
     if not _can_manage_images(c):
         abort(403)
-    f = request.files.get("image")
-    if not f or not f.filename:
-        flash("Chưa chọn file ảnh.", "error")
-        return redirect(url_for("colors.detail", color_id=color_id))
-    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
-    if ext not in config.ALLOWED_IMAGE_EXT:
-        flash(f"Chỉ nhận ảnh: {', '.join(sorted(config.ALLOWED_IMAGE_EXT))}", "error")
+    files = [f for f in request.files.getlist("image") if f and f.filename]
+    if not files:
+        flash("Chưa chọn file.", "error")
         return redirect(url_for("colors.detail", color_id=color_id))
     config.IMAGE_FOLDER.mkdir(parents=True, exist_ok=True)
-    filename = f"color{color_id}_{int(time.time())}_{secure_filename(Path(f.filename).stem) or 'anh'}.{ext}"
-    f.save(config.IMAGE_FOLDER / filename)
-    rel = f"uploads/images/{filename}"
-    image_model.create(color_id, rel,
-                       request.form.get("loai_anh", "Khác"),
-                       session["user_id"],
-                       request.form.get("ghi_chu", "").strip())
-    log(session["user_id"], "TẢI ẢNH", "color", color_id,
-        {"file": rel, "loai_anh": request.form.get("loai_anh")})
-    flash("Đã tải ảnh lên.", "success")
+    loai_anh = request.form.get("loai_anh", "Khác")
+    ghi_chu = request.form.get("ghi_chu", "").strip()
+    saved = 0
+    for i, f in enumerate(files):
+        ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+        if not ext or ext in config.BLOCKED_UPLOAD_EXT:
+            flash(f"Bỏ qua file '{f.filename}' — đuôi .{ext or '?'} không được phép.", "error")
+            continue
+        filename = f"color{color_id}_{int(time.time()*1000)}_{i}_{secure_filename(Path(f.filename).stem) or 'anh'}.{ext}"
+        f.save(config.IMAGE_FOLDER / filename)
+        rel = f"uploads/images/{filename}"
+        image_model.create(color_id, rel, loai_anh, session["user_id"], ghi_chu)
+        log(session["user_id"], "TẢI ẢNH", "color", color_id, {"file": rel, "loai_anh": loai_anh})
+        saved += 1
+    if saved:
+        flash(f"Đã tải lên {saved} file." if saved > 1 else "Đã tải file lên.", "success")
     return redirect(url_for("colors.detail", color_id=color_id))
 
 
@@ -594,6 +642,35 @@ def delete(color_id):
     log(session["user_id"], "XÓA MÀU", "color", color_id, {"ma_mau": ma_mau})
     flash(f"Đã xóa màu '{ma_mau}'.", "success")
     return redirect(url_for("colors.index"))
+
+
+@bp.route("/colors/<int:color_id>/hex", methods=["POST"])
+@permission_required("duyet_mau")
+def edit_hex(color_id):
+    """Sửa NHANH mã HEX + Lab đo máy ngay tại trang chi tiết — Admin/Quản
+    lý (duyet_mau) mới được. Chỉ đổi màu hiển thị/Lab để so màu, KHÔNG ảnh
+    hưởng công thức."""
+    c = color_model.get(color_id)
+    if not c:
+        flash("Không tìm thấy màu này.", "error")
+        return redirect(url_for("colors.index"))
+    hex_moi = _clean_hex(request.form.get("hex_color"))
+    if not hex_moi:
+        flash("Mã HEX không hợp lệ — phải dạng #RRGGBB.", "error")
+        return redirect(url_for("colors.detail", color_id=color_id))
+    try:
+        lab_moi = _parse_lab(request.form)
+    except ValueError as e:
+        flash(str(e), "error")
+        return redirect(url_for("colors.detail", color_id=color_id))
+    color_model.update_info(color_id, c["ma_mau"], c["ten_mau"] or "",
+                            c["ghi_chu"] or "", hex_color=hex_moi, lab=lab_moi)
+    log(session["user_id"], "SỬA MÃ HEX", "color", color_id,
+        {"cu": c["hex_color"], "moi": hex_moi,
+         "lab_cu": [c["lab_l"], c["lab_a"], c["lab_b"]] if c["lab_l"] is not None else None,
+         "lab_moi": list(lab_moi) if lab_moi else None})
+    flash(f"Đã đổi mã HEX → '{hex_moi}'" + (" và cập nhật Lab đo máy." if lab_moi else "."), "success")
+    return redirect(url_for("colors.detail", color_id=color_id))
 
 
 @bp.route("/colors/<int:color_id>/images/<int:image_id>/delete", methods=["POST"])
