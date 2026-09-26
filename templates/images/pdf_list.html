@@ -11,17 +11,20 @@
 
 <div class="table-wrap">
 <table class="data-table responsive-stack">
-  <thead><tr><th>Tên file</th><th>Mã màu</th><th>Dung lượng</th><th>Ngày tạo</th><th style="width:100px"></th></tr></thead>
+  <thead><tr><th>Tên file</th><th>Mã màu</th><th>Dung lượng</th><th>Ngày tạo</th><th style="width:150px"></th></tr></thead>
   <tbody>
     {% for f in files %}
     <tr>
-      <td class="small">{{ f['name'] }}</td>
+      <td class="small">
+        <a href="{{ url_for('static', filename='uploads/pdf/' + f['name']) }}" target="_blank" rel="noopener">{{ f['name'] }}</a>
+      </td>
       <td>{% if f['ma_mau'] %}<b>{{ f['ma_mau'] }}</b>{% else %}<span class="muted">—</span>{% endif %}</td>
       <td class="num">{{ f['size'] }}</td>
       <td class="small">{{ f['mtime'] }}</td>
-      <td>
+      <td style="white-space:nowrap">
+        <a class="btn btn-sm" href="{{ url_for('static', filename='uploads/pdf/' + f['name']) }}" target="_blank" rel="noopener">Xem</a>
         <form method="post" action="{{ url_for('images.pdf_delete') }}"
-              onsubmit="return confirm('Xóa file {{ f['name'] }}?')" style="margin:0">
+              onsubmit="return confirm('Xóa file {{ f['name'] }}?')" style="margin:0;display:inline-block">
           <input type="hidden" name="filename" value="{{ f['name'] }}">
           <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
         </form>
