@@ -53,6 +53,20 @@ def _paginate(items, page, per_page):
     return items[start:start + per_page], page, total_pages, total
 
 
+def _ma_mau_sort_key(f):
+    """Sắp theo MÃ MÀU cho dễ tìm (thay vì theo thời gian upload):
+    - mã số thuần (21, 22...) lên trước, theo đúng thứ tự số
+    - mã không phải số thuần (KH-user-01...) xếp sau, theo alphabet
+    - file không xác định được mã màu (mồ côi/không track) xếp cuối cùng,
+      mới upload lên trước để còn dễ nhận ra file vừa thêm."""
+    ma = f.get("ma_mau")
+    if ma and ma.isdigit():
+        return (0, int(ma), 0)
+    if ma:
+        return (1, ma, 0)
+    return (2, 0, -f["mtime_sort"])
+
+
 # ---------- Tab Ảnh ----------
 
 def _list_image_files():
@@ -88,7 +102,7 @@ def _list_image_files():
             "loai_anh": db_row["loai_anh"] if db_row else None,
             "tracked": db_row is not None,
         })
-    files.sort(key=lambda f: f["mtime_sort"], reverse=True)
+    files.sort(key=_ma_mau_sort_key)
     return files
 
 
@@ -155,7 +169,7 @@ def _list_pdf_files():
                 "mtime_sort": stat.st_mtime,
                 "ma_mau": ma_mau,
             })
-    files.sort(key=lambda f: f["mtime_sort"], reverse=True)
+    files.sort(key=_ma_mau_sort_key)
     return files
 
 
