@@ -153,9 +153,10 @@ def _is_dark_hex(hex6):
 @bp.route("/colors/export")
 @login_required
 def export_excel():
-    """Xuất nhanh mã màu + mã HEX + tỷ lệ pigment cấu tạo (theo phiên bản
-    đang dùng) ra file Excel — đúng danh sách màu đang hiện ở Thư viện màu.
-    Ô mã HEX được tô luôn theo đúng màu thật cho dễ nhìn/đối chiếu."""
+    """Xuất nhanh mã màu + mã HEX + L*a*b* (nếu đã đo bằng máy đo màu) + tỷ lệ
+    pigment cấu tạo (theo phiên bản đang dùng) ra file Excel — đúng danh sách
+    màu đang hiện ở Thư viện màu. Ô mã HEX được tô luôn theo đúng màu thật
+    cho dễ nhìn/đối chiếu."""
     items = color_model.list_all()
     pigments = pigment_model.all_ordered()
 
@@ -163,7 +164,10 @@ def export_excel():
     ws = wb.active
     ws.title = "Mã màu"
 
-    headers = ["Mã màu", "Tên màu", "Mã HEX"] + [p["name"] for p in pigments]
+    LAB_COLS = ["L*", "a*", "b*"]
+    base_headers = ["Mã màu", "Tên màu", "Mã HEX"] + LAB_COLS
+    headers = base_headers + [p["name"] for p in pigments]
+    pigment_start_col = len(base_headers) + 1  # cột bắt đầu của các pigment
     ws.append(headers)
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill("solid", fgColor="4472C4")
@@ -181,7 +185,8 @@ def export_excel():
         if c["active_version_id"]:
             ratio_map = {r["pigment_id"]: r["ty_le"] for r in color_version.get_ratio_rows(c["active_version_id"])}
 
-        ws.append([c["ma_mau"], c["ten_mau"] or "", hex_color]
+        ws.append([c["ma_mau"], c["ten_mau"] or "", hex_color,
+                   c["lab_l"], c["lab_a"], c["lab_b"]]
                   + [ratio_map.get(p["id"]) or None for p in pigments])
 
         fill_hex = hex_color.lstrip("#").upper()
@@ -191,15 +196,20 @@ def export_excel():
             hex_cell.font = Font(color="FFFFFF" if _is_dark_hex(fill_hex) else "000000", bold=True)
             hex_cell.alignment = Alignment(horizontal="center")
 
+        for lab_idx in range(3):
+            cell = ws.cell(row=row_idx, column=4 + lab_idx)
+            cell.number_format = "0.00"
+            cell.alignment = Alignment(horizontal="center")
+
         for p_idx in range(len(pigments)):
-            cell = ws.cell(row=row_idx, column=4 + p_idx)
+            cell = ws.cell(row=row_idx, column=pigment_start_col + p_idx)
             cell.number_format = "0.00%"
             cell.alignment = Alignment(horizontal="center")
 
-    widths = [16, 28, 12] + [14] * len(pigments)
+    widths = [16, 28, 12, 9, 9, 9] + [14] * len(pigments)
     for col_idx, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
-    ws.freeze_panes = "D2"
+    ws.freeze_panes = ws.cell(row=2, column=pigment_start_col).coordinate
     ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{len(items) + 1}"
 
     buf = BytesIO()
