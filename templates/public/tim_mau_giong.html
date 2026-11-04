@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Tìm màu gần giống – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="public-page">
+  <a class="public-back" href="{{ url_for('public.bang_mau') }}">← Quay lại bảng màu</a>
+
+  <div class="page-head">
+    <h1>Tìm màu gần giống</h1>
+  </div>
+
+  <section class="card">
+    <form method="get">
+      <div class="hex-row" style="max-width:500px">
+        <input type="color" id="hexPicker" value="{{ hex_query if hex_query else '#cccccc' }}">
+        <input type="text" name="hex" id="hexText" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$"
+               placeholder="#RRGGBB" value="{{ hex_query }}">
+        <span class="muted small">Chọn màu hoặc gõ mã HEX.</span>
+      </div>
+      <label style="margin-top:10px;display:block">Hoặc nhập Lab đo từ máy đo màu <span class="muted small">(chính xác hơn HEX — ưu tiên dùng nếu có)</span>
+        <div class="form-grid" style="margin-top:4px;max-width:400px">
+          <input type="number" step="any" name="lab_l" placeholder="L*" value="{{ raw_l }}">
+          <input type="number" step="any" name="lab_a" placeholder="a*" value="{{ raw_a }}">
+          <input type="number" step="any" name="lab_b" placeholder="b*" value="{{ raw_b }}">
+        </div>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Tìm</button>
+      </div>
+    </form>
+  </section>
+
+  {% if lab_query %}
+  <p class="muted small" style="margin:10px 0 -4px">Đang so theo Lab đo máy bạn nhập (chính xác hơn HEX).</p>
+  {% endif %}
+  {% if hex_query or lab_query %}
+  <h2 style="margin:18px 0 12px">Kết quả — {{ results|length }} màu gần giống nhất</h2>
+  <div class="color-grid">
+    {% for r in results %}
+    <a class="color-card" href="{{ url_for('public.bang_mau_detail', color_id=r.color['id']) }}">
+      <div class="swatch" style="background: {{ r.color['hex_color'] or '#e5e7eb' }}"></div>
+      <div class="card-body">
+        <div class="card-title">
+          <b>{{ r.color['ma_mau'] }}</b>
+          <span class="badge badge-{{ 'ok' if r.similarity_pct >= 90 else ('warn' if r.similarity_pct < 60 else 'muted') }}">Khớp {{ r.similarity_pct }}%</span>
+        </div>
+        <div class="card-sub">{{ r.color['ten_mau'] or 'Chưa đặt tên' }}</div>
+      </div>
+    </a>
+    {% else %}
+    <p class="muted">Chưa có màu nào trong bảng màu để so sánh.</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  const picker = document.getElementById('hexPicker');
+  const text = document.getElementById('hexText');
+  if (!picker || !text) return;
+  picker.addEventListener('input', () => { text.value = picker.value.toUpperCase(); });
+  text.addEventListener('input', () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(text.value.trim())) picker.value = text.value.trim();
+  });
+})();
+</script>
+{% endblock %}

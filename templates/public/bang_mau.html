@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Bảng màu – BRICON COLOR LAB{% endblock %}
+{% block content %}
+<div class="public-page">
+  <div class="public-header">
+    <span class="public-brand"><span class="brand-mark">B</span>BRICON</span>
+    <h1>Bảng màu</h1>
+    <p>Xem mã màu, hình ảnh thực tế và thông số Lab — không cần đăng nhập.</p>
+  </div>
+  <div class="public-actions">
+    <a class="btn btn-primary" href="{{ url_for('public.bang_mau_tim_mau_giong') }}">🔍 Tìm màu gần giống</a>
+  </div>
+
+  <div class="color-grid">
+    {% for c in items %}
+    <a class="color-card" href="{{ url_for('public.bang_mau_detail', color_id=c['id']) }}">
+      <div class="swatch" style="background: {{ c['hex_color'] or '#e5e7eb' }}">
+        {% if not c['hex_color'] %}<span class="swatch-empty">chưa có màu</span>{% endif %}
+      </div>
+      <div class="card-body">
+        <div class="card-title"><b>{{ c['ma_mau'] }}</b></div>
+        <div class="card-sub">{{ c['ten_mau'] or 'Chưa đặt tên' }}</div>
+      </div>
+    </a>
+    {% else %}
+    <p class="muted">Chưa có màu nào để hiển thị.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

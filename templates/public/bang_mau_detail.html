@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ color['ma_mau'] }} – Bảng màu BRICON{% endblock %}
+{% block content %}
+<div class="public-page">
+  <a class="public-back" href="{{ url_for('public.bang_mau') }}">← Quay lại bảng màu</a>
+
+  <div class="page-head">
+    <h1><span class="swatch-dot" style="background: {{ color['hex_color'] or '#e5e7eb' }}"></span>Màu {{ color['ma_mau'] }}{% if color['ten_mau'] %} – {{ color['ten_mau'] }}{% endif %}</h1>
+  </div>
+
+  <div class="detail-grid">
+    <section class="card">
+      <h2>Hình ảnh</h2>
+      {% if images %}
+      <div class="gallery">
+        {% for img in images %}
+        {% set kind = img['file_path']|file_kind %}
+        <figure>
+          {% if kind == 'image' %}
+          <a class="js-lightbox" href="{{ url_for('static', filename=img['file_path']) }}"
+             data-src="{{ url_for('static', filename=img['file_path']) }}">
+            <img src="{{ url_for('static', filename=img['file_path']) }}" alt="{{ color['ma_mau'] }}">
+          </a>
+          {% elif kind == 'video' %}
+          <video controls src="{{ url_for('static', filename=img['file_path']) }}"></video>
+          {% else %}
+          <a class="file-card" href="{{ url_for('static', filename=img['file_path']) }}" target="_blank" rel="noopener">
+            <span class="file-icon">{{ img['file_path']|file_icon }}</span>
+            <span>{{ img['file_path']|file_name }}</span>
+          </a>
+          {% endif %}
+          <figcaption>{{ img['loai_anh'] }}{% if img['ghi_chu'] %} — {{ img['ghi_chu'] }}{% endif %}</figcaption>
+        </figure>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">Màu này chưa có hình ảnh.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="color-swatch-big" style="background: {{ color['hex_color'] or '#e5e7eb' }}"></div>
+      {% if color['hex_color'] %}
+      <p class="muted small mono" style="margin-top:10px">{{ color['hex_color'] }}</p>
+      {% endif %}
+      {% if color['lab_l'] is not none %}
+      <p style="margin-top:8px;text-align:center">
+        <span class="lab-badge">L={{ color['lab_l'] }} a={{ color['lab_a'] }} b={{ color['lab_b'] }}</span>
+      </p>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if similar_colors %}
+  <section class="card" style="margin-top:14px">
+    <h2>Màu gần giống</h2>
+    <div class="color-grid">
+      {% for r in similar_colors %}
+      <a class="color-card" href="{{ url_for('public.bang_mau_detail', color_id=r.color['id']) }}">
+        <div class="swatch" style="background: {{ r.color['hex_color'] or '#e5e7eb' }}"></div>
+        <div class="card-body">
+          <div class="card-title">
+            <b>{{ r.color['ma_mau'] }}</b>
+            <span class="badge badge-{{ 'ok' if r.similarity_pct >= 90 else ('warn' if r.similarity_pct < 60 else 'muted') }}">Khớp {{ r.similarity_pct }}%</span>
+          </div>
+          <div class="card-sub">{{ r.color['ten_mau'] or 'Chưa đặt tên' }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

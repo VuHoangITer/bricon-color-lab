@@ -135,6 +135,39 @@ def list_all():
     return result
 
 
+def list_public():
+    """Danh sách màu cho TRANG CÔNG KHAI (khách xem, không cần đăng nhập) —
+    giống list_all() ở chỗ chỉ lấy màu đang có phiên bản ĐANG DÙNG (active),
+    nhưng CHỈ trả về các cột an toàn để hiển thị (mã màu/tên màu/HEX/Lab).
+    KHÔNG kèm công thức/tỷ lệ pigment, ghi chú nội bộ, hay ai tạo/duyệt —
+    những thứ đó không được lộ ra ngoài."""
+    db = get_db()
+    return db.execute(
+        """SELECT c.id, c.ma_mau, c.ten_mau, c.hex_color, c.lab_l, c.lab_a, c.lab_b
+           FROM colors c
+           JOIN color_versions cv ON cv.color_id = c.id AND cv.is_active = 1
+           ORDER BY
+               CASE WHEN c.ma_mau ~ '^[0-9]+$' THEN 0 ELSE 1 END,
+               CASE WHEN c.ma_mau ~ '^[0-9]+$' THEN CAST(c.ma_mau AS INTEGER) END,
+               c.ma_mau"""
+    ).fetchall()
+
+
+def get_public(color_id):
+    """Lấy 1 màu cho TRANG CÔNG KHAI — chỉ trả về nếu màu đang có phiên bản
+    ĐANG DÙNG (active, đã qua duyệt), và chỉ các cột an toàn (không công
+    thức). Trả None nếu màu không tồn tại hoặc chưa có bản active — tránh
+    lộ màu chưa chính thức/đang chờ duyệt ra ngoài cho khách."""
+    db = get_db()
+    return db.execute(
+        """SELECT c.id, c.ma_mau, c.ten_mau, c.hex_color, c.lab_l, c.lab_a, c.lab_b
+           FROM colors c
+           JOIN color_versions cv ON cv.color_id = c.id AND cv.is_active = 1
+           WHERE c.id = %s""",
+        (color_id,),
+    ).fetchone()
+
+
 def is_ready_for_weighing(color_id):
     """True nếu màu có 1 phiên bản đang dùng và tổng pigment ĐẠT 100%."""
     from models import color_version as cv_model

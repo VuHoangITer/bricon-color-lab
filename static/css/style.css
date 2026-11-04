@@ -162,6 +162,19 @@ input[readonly]:hover { cursor: not-allowed; }
 .gallery figcaption .small { display: block; }
 .note { padding: 10px 12px; border-left: 3px solid var(--primary); border-radius: 7px; background: var(--primary-soft); color: #704f00; font-size: 13px; }
 
+.public-page { width: 100%; max-width: 1100px; margin: 0 auto; padding: 24px 18px 40px; background: var(--bg); border-radius: 18px; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+.public-back { display: inline-block; margin-bottom: 14px; color: var(--primary-dark); font-size: 13px; font-weight: 700; text-decoration: none; }
+.public-back:hover { text-decoration: underline; }
+.public-header { text-align: center; margin-bottom: 20px; }
+.public-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--primary-dark); font-weight: 900; font-size: 13px; letter-spacing: .1em; }
+.public-brand .brand-mark { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--primary); color: #111827; font-weight: 900; }
+.public-header h1 { margin: 10px 0 4px; font-size: 22px; }
+.public-header p { margin: 0; color: var(--muted); font-size: 13px; }
+.public-actions { text-align: center; margin-bottom: 20px; }
+@media (min-width: 640px) {
+  .public-page { padding: 32px 36px 48px; }
+}
+
 .color-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
 .color-card { display: block; min-width: 0; overflow: hidden; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); box-shadow: var(--shadow); transition: box-shadow .15s, transform .15s; }
 .color-card:hover { box-shadow: 0 8px 20px rgba(16,24,40,.12); transform: translateY(-2px); }
